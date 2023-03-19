@@ -18,8 +18,8 @@
     You should have received a copy of the GNU General Public License along
     with this program; if not, write to the Free Software Foundation, Inc.,
     51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
- 
-    Details (including contact information) can be found at: 
+
+    Details (including contact information) can be found at:
 
     jpc.sourceforge.net
     or the developer website
@@ -33,28 +33,30 @@
 
 package org.jpc.emulator.pci;
 
-import org.jpc.emulator.motherboard.IOPortHandler;
-import org.jpc.emulator.memory.PhysicalAddressSpace;
-import org.jpc.emulator.pci.peripheral.VGACard;
-import org.jpc.emulator.*;
+import java.io.DataInput;
+import java.io.DataOutput;
+import java.io.IOException;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
-import java.io.*;
-import java.util.logging.*;
+import org.jpc.emulator.AbstractHardwareComponent;
+import org.jpc.emulator.HardwareComponent;
+import org.jpc.emulator.memory.PhysicalAddressSpace;
+import org.jpc.emulator.motherboard.IOPortHandler;
 
 /**
  * Provides an implementation of a PCI bus to allow access to all PCI devices.
  * <p>
- * Currently the PCI bus also performs the auto-configuration of all PCI devices
- * a role which will eventually be taken over by a later version of the system
- * bios.
+ * Currently the PCI bus also performs the auto-configuration of all PCI devices a role which will
+ * eventually be taken over by a later version of the system bios.
  * @author Chris Dennis
  */
 public class PCIBus extends AbstractHardwareComponent {
 
     private static final Logger LOGGING = Logger.getLogger(PCIBus.class.getName());
     static final int PCI_DEVICES_MAX = 64;
-    static final int PCI_IRQ_WORDS = ((PCI_DEVICES_MAX + 31) / 32);
-    private static final byte[] PCI_IRQS = new byte[]{11, 9, 11, 9};
+    static final int PCI_IRQ_WORDS = (PCI_DEVICES_MAX + 31) / 32;
+    private static final byte[] PCI_IRQS = { 11, 9, 11, 9 };
     private int busNumber;
     private int devFNMinimum;
     private boolean updated;
@@ -70,8 +72,8 @@ public class PCIBus extends AbstractHardwareComponent {
     /**
      * Constructs a default primary PCI bus.
      * <p>
-     * This bus can support up to 256 devices, currently only one PCI bus is
-     * supported by the JPC emulation.
+     * This bus can support up to 256 devices, currently only one PCI bus is supported by the JPC
+     * emulation.
      */
     public PCIBus() {
         busNumber = 0;
@@ -81,6 +83,7 @@ public class PCIBus extends AbstractHardwareComponent {
         devFNMinimum = 8;
     }
 
+    @Override
     public void saveState(DataOutput output) throws IOException {
         output.writeInt(busNumber);
         output.writeInt(devFNMinimum);
@@ -98,6 +101,7 @@ public class PCIBus extends AbstractHardwareComponent {
         output.writeInt(biosMemoryAddress);
     }
 
+    @Override
     public void loadState(DataInput input) throws IOException {
         updated = false;
         devices = new PCIDevice[256];
@@ -119,14 +123,12 @@ public class PCIBus extends AbstractHardwareComponent {
     /**
      * Connect a device to this PCI bus.
      * <p>
-     * This will trigger the allocation of three basic resources.  Firstly the
-     * device is assigned/chooses a device/function number.  Secondly an
-     * <code>IRQBouncer</code> is created so that this device can throw interrupts
-     * when necessary.  Thirdly the devices io-regions are registered, but not
-     * yet allocated addresses.
+     * This will trigger the allocation of three basic resources. Firstly the device is assigned/chooses
+     * a device/function number. Secondly an <code>IRQBouncer</code> is created so that this device can
+     * throw interrupts when necessary. Thirdly the devices io-regions are registered, but not yet
+     * allocated addresses.
      * <p>
-     * If this bus can support no more devices, or if the device returns an
-     * invalid io-region.
+     * If this bus can support no more devices, or if the device returns an invalid io-region.
      * @param device PCI card to be connected.
      * @return <code>true</code> if the device is successfully registered.
      */
@@ -177,7 +179,6 @@ public class PCIBus extends AbstractHardwareComponent {
                 ret = false;
                 continue;
             }
-            //region.setAddress(-1);
 
             if (region.getRegionNumber() == PCIDevice.PCI_ROM_SLOT) {
                 device.putConfigLong(PCIDevice.PCI_CONFIG_EXPANSION_ROM_BASE_ADDRESS, region.getType());
@@ -195,10 +196,7 @@ public class PCIBus extends AbstractHardwareComponent {
         }
         short command = device.configReadWord(PCIDevice.PCI_CONFIG_COMMAND);
         for (IORegion region : regions) {
-            if (null == region) {
-                continue;
-            }
-            if (PCIDevice.PCI_NUM_REGIONS <= region.getRegionNumber()) {
+            if ((null == region) || (PCIDevice.PCI_NUM_REGIONS <= region.getRegionNumber())) {
                 continue;
             }
             int configOffset;
@@ -212,20 +210,20 @@ public class PCIBus extends AbstractHardwareComponent {
                 if (0 != (command & PCIDevice.PCI_COMMAND_IO)) {
                     newAddress = device.configReadLong(configOffset);
                     newAddress &= ~(region.getSize() - 1);
-                    int lastAddress = newAddress + (int) region.getSize() - 1;
+                    int lastAddress = newAddress + (int)region.getSize() - 1;
 
-                    if (lastAddress <= (0xffffffffl & newAddress) || 0 == newAddress || 0x10000 <= (0xffffffffl & lastAddress)) {
+                    if (lastAddress <= (0xffffffffL & newAddress) || 0 == newAddress || 0x10000 <= (0xffffffffL & lastAddress)) {
                         newAddress = -1;
                     }
                 }
             } else if (region instanceof MemoryMappedIORegion) {
                 if (0 != (command & PCIDevice.PCI_COMMAND_MEMORY)) {
                     newAddress = device.configReadLong(configOffset);
-                    if (PCIDevice.PCI_ROM_SLOT == region.getRegionNumber() && (0 == (newAddress & 1))) {
+                    if (PCIDevice.PCI_ROM_SLOT == region.getRegionNumber() && 0 == (newAddress & 1)) {
                         newAddress = -1;
                     } else {
                         newAddress &= ~(region.getSize() - 1);
-                        int lastAddress = newAddress + (int) region.getSize() - 1;
+                        int lastAddress = newAddress + (int)region.getSize() - 1;
                         if (lastAddress <= newAddress || 0 == newAddress || -1 == lastAddress) {
                             newAddress = -1;
                         }
@@ -239,40 +237,36 @@ public class PCIBus extends AbstractHardwareComponent {
                     if (region instanceof IOPortIORegion) {
                         int deviceClass = device.configReadWord(PCIDevice.PCI_CONFIG_CLASS_DEVICE);
                         if (0x0101 == deviceClass && 4 == region.getSize()) {
-                            //r.unmap(); must actually be partial
                             LOGGING.log(Level.WARNING, "supposed to partially unmap");
-                            ioports.deregisterIOPortCapable((IOPortIORegion) region);
-                        } else //r.unmap();
-                        {
-                            ioports.deregisterIOPortCapable((IOPortIORegion) region);
+                            ioports.deregisterIOPortCapable((IOPortIORegion)region);
+                        } else {
+                            ioports.deregisterIOPortCapable((IOPortIORegion)region);
                         }
                     } else if (region instanceof MemoryMappedIORegion) {
-                        memory.unmap(region.getAddress(), (int) region.getSize());
+                        memory.unmap(region.getAddress(), (int)region.getSize());
                     }
                 }
                 region.setAddress(newAddress);
                 if (region.getAddress() != -1) {
                     if (region instanceof IOPortIORegion) {
-                        ioports.registerIOPortCapable((IOPortIORegion) region);
+                        ioports.registerIOPortCapable((IOPortIORegion)region);
                     } else if (region instanceof MemoryMappedIORegion) {
-                        memory.mapMemoryRegion((MemoryMappedIORegion) region, region.getAddress(), (int) region.getSize());
+                        memory.mapMemoryRegion((MemoryMappedIORegion)region, region.getAddress(), (int)region.getSize());
                     }
                 }
             }
         }
     }
 
-    private void loadMappings(PCIDevice device)
-    {
+    private void loadMappings(PCIDevice device) {
         IORegion[] regions = device.getIORegions();
 
         for (IORegion region : regions)
-            if (region.getAddress() != -1)
-            {
+            if (region.getAddress() != -1) {
                 if (region instanceof IOPortIORegion)
-                    ioports.registerIOPortCapable((IOPortIORegion) region);
+                    ioports.registerIOPortCapable((IOPortIORegion)region);
                 else if (region instanceof MemoryMappedIORegion)
-                    memory.mapMemoryRegion((MemoryMappedIORegion) region, region.getAddress(), (int) region.getSize());
+                    memory.mapMemoryRegion((MemoryMappedIORegion)region, region.getAddress(), (int)region.getSize());
             }
     }
 
@@ -282,11 +276,11 @@ public class PCIBus extends AbstractHardwareComponent {
 
     //PCIHostBridge shifted functionality
     private PCIDevice validPCIDataAccess(int address) {
-        int bus = (address >>> 16) & 0xff;
+        int bus = address >>> 16 & 0xff;
         if (0 != bus) {
             return null;
         }
-        return this.devices[(address >>> 8) & 0xff];
+        return this.devices[address >>> 8 & 0xff];
     }
 
     void writePCIDataByte(int address, byte data) {
@@ -322,7 +316,7 @@ public class PCIBus extends AbstractHardwareComponent {
     byte readPCIDataByte(int address) {
         PCIDevice device = this.validPCIDataAccess(address);
         if (null == device) {
-            return (byte) 0xff;
+            return (byte)0xff;
         }
         return device.configReadByte(address & 0xff);
     }
@@ -330,7 +324,7 @@ public class PCIBus extends AbstractHardwareComponent {
     short readPCIDataWord(int address) {
         PCIDevice device = this.validPCIDataAccess(address);
         if (null == device) {
-            return (short) 0xffff;
+            return (short)0xffff;
         }
         return device.configReadWord(address & 0xff);
     }
@@ -344,11 +338,10 @@ public class PCIBus extends AbstractHardwareComponent {
     }
 
     /**
-     * Performs the auto-configuration of PCI devices that is normally handled
-     * by the system bios.
+     * Performs the auto-configuration of PCI devices that is normally handled by the system bios.
      * <p>
-     * In later versions this method should be replaced by a more featured BIOS 
-     * ROM image, coupled with a more complete PCI emulation.
+     * In later versions this method should be replaced by a more featured BIOS ROM image, coupled with
+     * a more complete PCI emulation.
      */
     public void biosInit() {
         biosIOAddress = 0xc000;
@@ -361,11 +354,10 @@ public class PCIBus extends AbstractHardwareComponent {
         for (int i = 0; i < 4; i++) {
             byte irq = PCI_IRQS[i];
             /* set to trigger level */
-            elcr[irq >> 3] |= (1 << (irq & 7));
+            elcr[irq >> 3] |= 1 << (irq & 7);
             /* activate irq remapping in PIIX */
             isaBridge.configWriteByte(0x60 + i, irq);
         }
-
 
         ioports.ioPortWrite8(0x4d0, elcr[0]); // setup io master
         ioports.ioPortWrite8(0x4d1, elcr[1]); // setup io slave
@@ -384,47 +376,47 @@ public class PCIBus extends AbstractHardwareComponent {
         int deviceID = 0xffff & device.configReadWord(PCIDevice.PCI_CONFIG_DEVICE_ID);
 
         switch (deviceClass) {
-            case 0x0101:
-                if ((0xffff & vendorID) == 0x8086 && (0xffff & deviceID) == 0x7010) {
-                    /* PIIX3 IDE */
-                    device.configWriteWord(0x40, (short) 0x8000);
-                    device.configWriteWord(0x42, (short) 0x8000);
-                    defaultIOMap(device);
-                } else {
-                    /* IDE: we map it as in ISA mode */
-                    this.setIORegionAddress(device, 0, 0x1f0);
-                    this.setIORegionAddress(device, 1, 0x3f4);
-                    this.setIORegionAddress(device, 2, 0x170);
-                    this.setIORegionAddress(device, 3, 0x374);
-                }
-                break;
-            case 0x0300:
-                if (vendorID == 0x1234) /* VGA: map frame buffer to default Bochs VBE address */ {
-                    this.setIORegionAddress(device, 0, 0xe0000000);
-                } else {
-                    defaultIOMap(device);
-                }
-                break;
-            case 0x0800:
-                /* PIC */
-                if (vendorID == 0x1014) /* IBM */ {
-                    if (deviceID == 0x0046 || deviceID == 0xffff) /* MPIC & MPIC2 */ {
-                        this.setIORegionAddress(device, 0, 0x80800000 + 0x00040000);
-                    }
-                }
-                break;
-            case 0xff00:
-                if (vendorID == 0x0106b && (deviceID == 0x0017 || deviceID == 0x0022)) /* macio bridge */ {
-                    this.setIORegionAddress(device, 0, 0x80800000);
-                }
-                break;
-            case 0x200:
-                //Ethernet card IO region
-                this.setIORegionAddress(device, 0, device.configReadLong(0x10));
-                break;
-            default:
+        case 0x0101:
+            if ((0xffff & vendorID) == 0x8086 && (0xffff & deviceID) == 0x7010) {
+                /* PIIX3 IDE */
+                device.configWriteWord(0x40, (short)0x8000);
+                device.configWriteWord(0x42, (short)0x8000);
                 defaultIOMap(device);
-                break;
+            } else {
+                /* IDE: we map it as in ISA mode */
+                this.setIORegionAddress(device, 0, 0x1f0);
+                this.setIORegionAddress(device, 1, 0x3f4);
+                this.setIORegionAddress(device, 2, 0x170);
+                this.setIORegionAddress(device, 3, 0x374);
+            }
+            break;
+        case 0x0300:
+            if (vendorID == 0x1234) /* VGA: map frame buffer to default Bochs VBE address */ {
+                this.setIORegionAddress(device, 0, 0xe0000000);
+            } else {
+                defaultIOMap(device);
+            }
+            break;
+        case 0x0800:
+            /* PIC */
+            if (vendorID == 0x1014) /* IBM */ {
+                if (deviceID == 0x0046 || deviceID == 0xffff) /* MPIC & MPIC2 */ {
+                    this.setIORegionAddress(device, 0, 0x80800000 + 0x00040000);
+                }
+            }
+            break;
+        case 0xff00:
+            if (vendorID == 0x0106b && (deviceID == 0x0017 || deviceID == 0x0022)) /* macio bridge */ {
+                this.setIORegionAddress(device, 0, 0x80800000);
+            }
+            break;
+        case 0x200:
+            //Ethernet card IO region
+            this.setIORegionAddress(device, 0, device.configReadLong(0x10));
+            break;
+        default:
+            defaultIOMap(device);
+            break;
         }
 
         /* map the interrupt */
@@ -446,14 +438,12 @@ public class PCIBus extends AbstractHardwareComponent {
             }
             if (region instanceof IOPortIORegion) {
                 int paddr = biosIOAddress;
-                paddr = (int) ((paddr + region.getSize() - 1) &
-                        ~(region.getSize() - 1));
+                paddr = (int)(paddr + region.getSize() - 1 & ~(region.getSize() - 1));
                 this.setIORegionAddress(device, region.getRegionNumber(), paddr);
                 biosIOAddress += region.getSize();
             } else if (region instanceof MemoryMappedIORegion) {
                 int paddr = biosMemoryAddress;
-                paddr = (int) ((paddr + region.getSize() - 1) &
-                        ~(region.getSize() - 1));
+                paddr = (int)(paddr + region.getSize() - 1 & ~(region.getSize() - 1));
                 this.setIORegionAddress(device, region.getRegionNumber(), paddr);
                 biosMemoryAddress += region.getSize();
             }
@@ -470,7 +460,7 @@ public class PCIBus extends AbstractHardwareComponent {
         if (device.configWriteLong(offset, address)) {
             this.updateMappings(device);
 
-        /* enable memory mappings */
+            /* enable memory mappings */
         }
         IORegion region = device.getIORegion(regionNumber);
         if (region == null) {
@@ -489,6 +479,7 @@ public class PCIBus extends AbstractHardwareComponent {
         }
     }
 
+    @Override
     public void reset() {
         isaBridge = null;
         ioports = null;
@@ -499,34 +490,37 @@ public class PCIBus extends AbstractHardwareComponent {
         pciIRQLevels = new int[4][PCI_IRQ_WORDS];
     }
 
+    @Override
     public boolean initialised() {
-        return ((isaBridge != null) && (ioports != null) && (memory != null));
+        return isaBridge != null && ioports != null && memory != null;
     }
 
+    @Override
     public void acceptComponent(HardwareComponent component) {
         if (component instanceof PCIISABridge) {
-            isaBridge = (PCIISABridge) component;
+            isaBridge = (PCIISABridge)component;
         }
-        if ((component instanceof IOPortHandler) && component.initialised()) {
-            ioports = (IOPortHandler) component;
+        if (component instanceof IOPortHandler && component.initialised()) {
+            ioports = (IOPortHandler)component;
         }
-        if ((component instanceof PhysicalAddressSpace) && component.initialised()) {
-            memory = (PhysicalAddressSpace) component;
-        //The following call may be unnecessary
+        if (component instanceof PhysicalAddressSpace && component.initialised()) {
+            memory = (PhysicalAddressSpace)component;
+            //The following call may be unnecessary
         }
-        if ((component instanceof VGACard) && (memory != null)) {
-            updateMappings((VGACard) component);
+        if (component instanceof VGACard && memory != null) {
+            updateMappings((VGACard)component);
         }
     }
 
+    @Override
     public boolean updated() {
         return updated;
     }
 
+    @Override
     public void updateComponent(HardwareComponent component) {
-        if ((component instanceof VGACard) && component.updated()) {
+        if (component instanceof VGACard && component.updated()) {
             updated = true;
         }
     }
 }
-

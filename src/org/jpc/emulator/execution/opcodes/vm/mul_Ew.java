@@ -1,5 +1,8 @@
 /*
     JPC: An x86 PC Hardware Emulator for a pure Java Virtual Machine
+    Release Version 3.0
+
+    A project by Ian Preston, ianopolous AT gmail.com
 
     Copyright (C) 2012-2013 Ian Preston
 
@@ -15,8 +18,8 @@
     You should have received a copy of the GNU General Public License along
     with this program; if not, write to the Free Software Foundation, Inc.,
     51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
- 
-    Details (including contact information) can be found at: 
+
+    Details (including current contact information) can be found at:
 
     jpc.sourceforge.net
     or the developer website
@@ -27,42 +30,42 @@
 
 package org.jpc.emulator.execution.opcodes.vm;
 
-import org.jpc.emulator.execution.*;
-import org.jpc.emulator.execution.decoder.*;
-import org.jpc.emulator.processor.*;
-import org.jpc.emulator.processor.fpu64.*;
-import static org.jpc.emulator.processor.Processor.*;
+import static org.jpc.emulator.processor.Processor.getRegString;
 
-public class mul_Ew extends Executable
-{
+import org.jpc.emulator.execution.Executable;
+import org.jpc.emulator.execution.decoder.Modrm;
+import org.jpc.emulator.execution.decoder.PeekableInputStream;
+import org.jpc.emulator.processor.Processor;
+import org.jpc.emulator.processor.Processor.Reg;
+
+public class mul_Ew extends Executable {
     final int op1Index;
 
-    public mul_Ew(int blockStart, int eip, int prefices, PeekableInputStream input)
-    {
+    public mul_Ew(int blockStart, int eip, int prefices, PeekableInputStream input) {
         super(blockStart, eip);
         int modrm = input.readU8();
         op1Index = Modrm.Ew(modrm);
     }
 
-    public Branch execute(Processor cpu)
-    {
+    @Override
+    public Branch execute(Processor cpu) {
         Reg op1 = cpu.regs[op1Index];
-            cpu.af = false;
-            long res64 = (0xFFFF&op1.get16()) * (0xFFFF& cpu.r_eax.get16());
-            cpu.r_eax.set16((short)res64);
-            cpu.r_edx.set16((short)(res64 >> 16));
-            cpu.setOSZAPC_Logic16((int)res64);
-            cpu.cf = cpu.of = (cpu.r_edx.get16() != 0);
+        cpu.af = false;
+        long res64 = (0xFFFF & op1.get16()) * (0xFFFF & cpu.r_eax.get16());
+        cpu.r_eax.set16((short)res64);
+        cpu.r_edx.set16((short)(res64 >> 16));
+        cpu.setOSZAPC_Logic16((int)res64);
+        cpu.cf = cpu.of = cpu.r_edx.get16() != 0;
         return Branch.None;
     }
 
-    public boolean isBranch()
-    {
+    @Override
+    public boolean isBranch() {
         return false;
     }
 
-    public String toString()
-    {
-        return this.getClass().getName();
+    @Override
+    public String toString() {
+        return "mul" + " " + getRegString(op1Index);
     }
 }

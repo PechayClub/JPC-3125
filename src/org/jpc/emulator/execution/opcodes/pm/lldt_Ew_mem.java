@@ -1,5 +1,8 @@
 /*
     JPC: An x86 PC Hardware Emulator for a pure Java Virtual Machine
+    Release Version 3.0
+
+    A project by Ian Preston, ianopolous AT gmail.com
 
     Copyright (C) 2012-2013 Ian Preston
 
@@ -15,8 +18,8 @@
     You should have received a copy of the GNU General Public License along
     with this program; if not, write to the Free Software Foundation, Inc.,
     51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
- 
-    Details (including contact information) can be found at: 
+
+    Details (including current contact information) can be found at:
 
     jpc.sourceforge.net
     or the developer website
@@ -27,51 +30,46 @@
 
 package org.jpc.emulator.execution.opcodes.pm;
 
-import org.jpc.emulator.execution.*;
-import org.jpc.emulator.execution.decoder.*;
-import org.jpc.emulator.processor.*;
-import org.jpc.emulator.processor.fpu64.*;
-import static org.jpc.emulator.processor.Processor.*;
+import org.jpc.emulator.execution.Executable;
+import org.jpc.emulator.execution.decoder.Modrm;
+import org.jpc.emulator.execution.decoder.PeekableInputStream;
+import org.jpc.emulator.execution.decoder.Pointer;
+import org.jpc.emulator.processor.Processor;
+import org.jpc.emulator.processor.ProcessorException;
+import org.jpc.emulator.processor.Segment;
+import org.jpc.emulator.processor.SegmentFactory;
 
-public class lldt_Ew_mem extends Executable
-{
+public class lldt_Ew_mem extends Executable {
     final Pointer op1;
 
-    public lldt_Ew_mem(int blockStart, int eip, int prefices, PeekableInputStream input)
-    {
+    public lldt_Ew_mem(int blockStart, int eip, int prefices, PeekableInputStream input) {
         super(blockStart, eip);
         int modrm = input.readU8();
         op1 = Modrm.getPointer(prefices, modrm, input);
     }
 
-    public Branch execute(Processor cpu)
-    {
+    @Override
+    public Branch execute(Processor cpu) {
         int selector = op1.get16(cpu) & 0xffff;
 
-	if (selector == 0)
-        {
-	    cpu.ldtr = SegmentFactory.NULL_SEGMENT;
-        }
-        else
-        {
-	Segment newSegment = cpu.getSegment(selector & ~0x4);
-	if (newSegment.getType() != 0x02)
-	    throw new ProcessorException(ProcessorException.Type.GENERAL_PROTECTION, selector, true);
-
-	if (!(newSegment.isPresent()))
-	    throw new ProcessorException(ProcessorException.Type.GENERAL_PROTECTION, selector, true);
-        cpu.ldtr = newSegment;
+        if (selector == 0) {
+            cpu.ldtr = SegmentFactory.NULL_SEGMENT;
+        } else {
+            Segment newSegment = cpu.getSegment(selector & ~0x4);
+            if (newSegment.getType() != 0x02 || !newSegment.isPresent())
+                throw new ProcessorException(ProcessorException.Type.GENERAL_PROTECTION, selector, true);
+            cpu.ldtr = newSegment;
         }
         return Branch.None;
     }
 
-    public boolean isBranch()
-    {
+    @Override
+    public boolean isBranch() {
         return false;
     }
 
-    public String toString()
-    {
-        return this.getClass().getName();
+    @Override
+    public String toString() {
+        return "lldt" + " " + "[" + op1.toString() + "]";
     }
 }

@@ -18,8 +18,8 @@
     You should have received a copy of the GNU General Public License along
     with this program; if not, write to the Free Software Foundation, Inc.,
     51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
- 
-    Details (including contact information) can be found at: 
+
+    Details (including contact information) can be found at:
 
     jpc.sourceforge.net
     or the developer website
@@ -36,18 +36,17 @@ package org.jpc.emulator.pci;
 /**
  * A object that allows a PCI device to raise an interrupt on the processor.
  * <p>
- * Instances of this class are handed out to PCI devices by the PCI-ISA bridge
- * so that interrupt request can be directed straight to the ISA bridge, and
- * therefore removing the indirection of access through the PCI bus itself.
+ * Instances of this class are handed out to PCI devices by the PCI-ISA bridge so that interrupt
+ * request can be directed straight to the ISA bridge, and therefore removing the indirection of
+ * access through the PCI bus itself.
  * @author Chris Dennis
  */
-public interface IRQBouncer
-{
+public interface IRQBouncer {
     /**
      * Raise or lower the given interrupt on the processor.
      * @param device source of the request
      * @param irqNumber interrupt number to adjust
      * @param level 1 to raise, 0 to lower.
      */
-    public void setIRQ(PCIDevice device, int irqNumber, int level);
+    void setIRQ(PCIDevice device, int irqNumber, int level);
 }

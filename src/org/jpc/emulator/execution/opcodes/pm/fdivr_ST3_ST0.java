@@ -1,5 +1,8 @@
 /*
     JPC: An x86 PC Hardware Emulator for a pure Java Virtual Machine
+    Release Version 3.0
+
+    A project by Ian Preston, ianopolous AT gmail.com
 
     Copyright (C) 2012-2013 Ian Preston
 
@@ -15,8 +18,8 @@
     You should have received a copy of the GNU General Public License along
     with this program; if not, write to the Free Software Foundation, Inc.,
     51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
- 
-    Details (including contact information) can be found at: 
+
+    Details (including current contact information) can be found at:
 
     jpc.sourceforge.net
     or the developer website
@@ -27,40 +30,36 @@
 
 package org.jpc.emulator.execution.opcodes.pm;
 
-import org.jpc.emulator.execution.*;
-import org.jpc.emulator.execution.decoder.*;
-import org.jpc.emulator.processor.*;
-import org.jpc.emulator.processor.fpu64.*;
-import static org.jpc.emulator.processor.Processor.*;
+import org.jpc.emulator.execution.Executable;
+import org.jpc.emulator.execution.decoder.PeekableInputStream;
+import org.jpc.emulator.processor.Processor;
 
-public class fdivr_ST3_ST0 extends Executable
-{
+public class fdivr_ST3_ST0 extends Executable {
 
-    public fdivr_ST3_ST0(int blockStart, int eip, int prefices, PeekableInputStream input)
-    {
+    public fdivr_ST3_ST0(int blockStart, int eip, int prefices, PeekableInputStream input) {
         super(blockStart, eip);
         int modrm = input.readU8();
     }
 
-    public Branch execute(Processor cpu)
-    {
+    @Override
+    public Branch execute(Processor cpu) {
         double freg0 = cpu.fpu.ST(3);
         double freg1 = cpu.fpu.ST(0);
-        if (((freg0 == 0.0) && (freg1 == 0.0)) || (Double.isInfinite(freg0) && Double.isInfinite(freg1)))
+        if (freg0 == 0.0 && freg1 == 0.0 || Double.isInfinite(freg0) && Double.isInfinite(freg1))
             cpu.fpu.setInvalidOperation();
-	if ((freg0 == 0.0) && !Double.isNaN(freg1) && !Double.isInfinite(freg1))
+        if (freg0 == 0.0 && !Double.isNaN(freg1) && !Double.isInfinite(freg1))
             cpu.fpu.setZeroDivide();
-        cpu.fpu.setST(3,  freg1/freg0);
+        cpu.fpu.setST(3, freg1 / freg0);
         return Branch.None;
     }
 
-    public boolean isBranch()
-    {
+    @Override
+    public boolean isBranch() {
         return false;
     }
 
-    public String toString()
-    {
-        return this.getClass().getName();
+    @Override
+    public String toString() {
+        return "fdivr" + " " + "ST3" + ", " + "ST0";
     }
 }

@@ -28,15 +28,14 @@
 package org.jpc.emulator.execution.decoder;
 
 import org.jpc.emulator.PC;
-import org.jpc.emulator.execution.*;
+import org.jpc.emulator.execution.Executable;
+import org.jpc.emulator.execution.Executable.Branch;
 import org.jpc.emulator.execution.codeblock.CodeBlock;
-import org.jpc.emulator.processor.*;
+import org.jpc.emulator.processor.Processor;
+import org.jpc.emulator.processor.State;
 import org.jpc.j2se.Option;
 
-import static org.jpc.emulator.execution.Executable.*;
-
-public class BasicBlock implements CodeBlock
-{
+public class BasicBlock implements CodeBlock {
     public static final boolean LOG_BLOCKENTRY = Option.log_blockentry.value();
     public static final boolean LOG_STATE = Option.log_state.value();
     public static final boolean SINGLE_STEP_TIME = Option.singlesteptime.value();
@@ -47,9 +46,8 @@ public class BasicBlock implements CodeBlock
     public Executable start;
     public BasicBlock link1, link2;
     public final int x86Length, x86Count;
-    
-    public BasicBlock(Executable start, int x86Length, int x86Count)
-    {
+
+    public BasicBlock(Executable start, int x86Length, int x86Count) {
         this.start = start;
         this.x86Length = x86Length;
         this.x86Count = x86Count;
@@ -57,49 +55,41 @@ public class BasicBlock implements CodeBlock
             throw new IllegalStateException("Block with zero x86Count!");
     }
 
-    public void preBlock(Processor cpu)
-    {
+    public void preBlock(Processor cpu) {
         if (LOG_BLOCKENTRY)
             System.out.printf("***** %08x:%08x\n", cpu.cs.getBase(), cpu.eip);
         if (PC.HISTORY)
             PC.logBlock(cpu.getInstructionPointer(), this);
     }
 
-    public void postBlock(Processor cpu)
-    {
+    public void postBlock(Processor cpu) {
         if (PC.HISTORY)
             lastExitEip = cpu.getInstructionPointer();
     }
 
-    private boolean watchedAddress(int addr)
-    {
-        if (addr < MIN_ADDR_WATCH)
-            return false;
-        if ((addr & 0xFFFFFFFFL) > (MAX_ADDR_WATCH & 0xFFFFFFFFL))
+    private boolean watchedAddress(int addr) {
+        if ((addr < MIN_ADDR_WATCH) || ((addr & 0xFFFFFFFFL) > (MAX_ADDR_WATCH & 0xFFFFFFFFL)))
             return false;
         return true;
     }
 
-    public void postInstruction(Processor cpu, Executable last)
-    {
-        if ((LOG_STATE) && watchedAddress(cpu.getInstructionPointer()))
-        {
-            System.out.println("\t"+last);
+    public void postInstruction(Processor cpu, Executable last) {
+        if (LOG_STATE && watchedAddress(cpu.getInstructionPointer())) {
+            System.out.println("\t" + last);
             State.print(cpu);
         }
-        if ((SINGLE_STEP_TIME) && !last.toString().contains("eip"))
+        if (SINGLE_STEP_TIME && !last.toString().contains("eip"))
             cpu.vmClock.update(1);
         cpu.rf(false);
     }
 
-    public Branch execute(Processor cpu)
-    {
+    @Override
+    public Branch execute(Processor cpu) {
         Executable current = start;
         Executable.Branch ret;
 
         preBlock(cpu);
-        while ((ret = current.execute(cpu)) == Executable.Branch.None)
-        {
+        while ((ret = current.execute(cpu)) == Executable.Branch.None) {
             postInstruction(cpu, current);
             current = current.next;
         }
@@ -108,28 +98,28 @@ public class BasicBlock implements CodeBlock
         return ret;
     }
 
-    public int getX86Length()
-    {
+    @Override
+    public int getX86Length() {
         return x86Length;
     }
 
-    public int getX86Count()
-    {
+    @Override
+    public int getX86Count() {
         return x86Count;
     }
 
-    public boolean handleMemoryRegionChange(int startAddress, int endAddress)
-    {
+    @Override
+    public boolean handleMemoryRegionChange(int startAddress, int endAddress) {
         return false;
     }
 
-    public String getDisplayString()
-    {
+    @Override
+    public String getDisplayString() {
         return toString();
     }
 
-    public Instruction getInstructions()
-    {
+    @Override
+    public Instruction getInstructions() {
         return null;
     }
 }

@@ -1,5 +1,8 @@
 /*
     JPC: An x86 PC Hardware Emulator for a pure Java Virtual Machine
+    Release Version 3.0
+
+    A project by Ian Preston, ianopolous AT gmail.com
 
     Copyright (C) 2012-2013 Ian Preston
 
@@ -15,8 +18,8 @@
     You should have received a copy of the GNU General Public License along
     with this program; if not, write to the Free Software Foundation, Inc.,
     51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
- 
-    Details (including contact information) can be found at: 
+
+    Details (including current contact information) can be found at:
 
     jpc.sourceforge.net
     or the developer website
@@ -27,24 +30,21 @@
 
 package org.jpc.emulator.execution.opcodes.rm;
 
-import org.jpc.emulator.execution.*;
-import org.jpc.emulator.execution.decoder.*;
-import org.jpc.emulator.processor.*;
-import org.jpc.emulator.processor.fpu64.*;
-import static org.jpc.emulator.processor.Processor.*;
+import org.jpc.emulator.execution.Executable;
+import org.jpc.emulator.execution.decoder.Modrm;
+import org.jpc.emulator.execution.decoder.PeekableInputStream;
+import org.jpc.emulator.processor.Processor;
 
-public class xor_o16_rAX_Iw extends Executable
-{
+public class xor_o16_rAX_Iw extends Executable {
     final int immw;
 
-    public xor_o16_rAX_Iw(int blockStart, int eip, int prefices, PeekableInputStream input)
-    {
+    public xor_o16_rAX_Iw(int blockStart, int eip, int prefices, PeekableInputStream input) {
         super(blockStart, eip);
         immw = Modrm.Iw(input);
     }
 
-    public Branch execute(Processor cpu)
-    {
+    @Override
+    public Branch execute(Processor cpu) {
         cpu.of = cpu.af = cpu.cf = false;
         cpu.flagResult = (short)(cpu.r_eax.get16() ^ immw);
         cpu.r_eax.set16((short)cpu.flagResult);
@@ -52,13 +52,13 @@ public class xor_o16_rAX_Iw extends Executable
         return Branch.None;
     }
 
-    public boolean isBranch()
-    {
+    @Override
+    public boolean isBranch() {
         return false;
     }
 
-    public String toString()
-    {
-        return this.getClass().getName();
+    @Override
+    public String toString() {
+        return "xor_o16" + " " + "rAX" + ", " + Integer.toHexString(immw);
     }
 }

@@ -18,8 +18,8 @@
     You should have received a copy of the GNU General Public License along
     with this program; if not, write to the Free Software Foundation, Inc.,
     51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
- 
-    Details (including contact information) can be found at: 
+
+    Details (including contact information) can be found at:
 
     jpc.sourceforge.net
     or the developer website
@@ -34,57 +34,49 @@
 package org.jpc.debugger.util;
 
 import javax.swing.JTable;
-import javax.swing.table.*;
+import javax.swing.table.AbstractTableModel;
+import javax.swing.table.TableColumn;
+import javax.swing.table.TableColumnModel;
 
-public abstract class BasicTableModel extends AbstractTableModel
-{
+public abstract class BasicTableModel extends AbstractTableModel {
     private String[] titles;
     private int[] widths;
     private boolean isEditable;
 
-    public BasicTableModel(String[] columnTitles, int[] columnWidths)
-    {
+    protected BasicTableModel(String[] columnTitles, int[] columnWidths) {
         this(columnTitles, columnWidths, false);
     }
 
-    public BasicTableModel(String[] columnTitles, int[] columnWidths, boolean isEditable)
-    {
+    protected BasicTableModel(String[] columnTitles, int[] columnWidths, boolean isEditable) {
         this.titles = columnTitles;
         this.widths = columnWidths;
         this.isEditable = isEditable;
     }
 
-    public int getColumnCount()
-    {
+    @Override
+    public int getColumnCount() {
         return titles.length;
     }
-    
-    public String getColumnName(int col)
-    {
+
+    @Override
+    public String getColumnName(int col) {
         return titles[col];
     }
-    
-    public boolean isCellEditable(int r, int c)
-    {
+
+    @Override
+    public boolean isCellEditable(int r, int c) {
         return isEditable;
     }
 
-    public void setupColumnWidths(JTable parent)
-    {
+    public void setupColumnWidths(JTable parent) {
         if (widths == null)
             return;
 
         parent.setAutoResizeMode(JTable.AUTO_RESIZE_OFF);
         TableColumnModel colModel = parent.getColumnModel();
-        for (int i=0; i<colModel.getColumnCount(); i++)
-        {
+        for (int i = 0; i < colModel.getColumnCount(); i++) {
             TableColumn col = colModel.getColumn(i);
             col.setPreferredWidth(widths[i]);
         }
-    }
-
-    public void fireTableDataChanged()
-    {
-        super.fireTableDataChanged();
     }
 }

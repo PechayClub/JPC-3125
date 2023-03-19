@@ -1,32 +1,29 @@
 package org.jpc.emulator.execution.opcodes.pm;
 
-import org.jpc.emulator.execution.*;
-import org.jpc.emulator.execution.decoder.*;
-import org.jpc.emulator.processor.*;
-import org.jpc.emulator.processor.fpu64.*;
-import static org.jpc.emulator.processor.Processor.*;
+import org.jpc.emulator.execution.Executable;
+import org.jpc.emulator.execution.StaticOpcodes;
+import org.jpc.emulator.execution.decoder.Instruction;
+import org.jpc.emulator.processor.Processor;
 
-public class insw_a16 extends Executable
-{
+public class insw_a16 extends Executable {
 
-    public insw_a16(int blockStart, Instruction parent)
-    {
+    public insw_a16(int blockStart, Instruction parent) {
         super(blockStart, parent);
     }
 
-    public Branch execute(Processor cpu)
-    {
+    @Override
+    public Branch execute(Processor cpu) {
         StaticOpcodes.insw_a16(cpu, cpu.es);
         return Branch.None;
     }
 
-    public boolean isBranch()
-    {
+    @Override
+    public boolean isBranch() {
         return false;
     }
 
-    public String toString()
-    {
+    @Override
+    public String toString() {
         return this.getClass().getName();
     }
 }

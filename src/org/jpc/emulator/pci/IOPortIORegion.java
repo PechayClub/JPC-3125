@@ -18,8 +18,8 @@
     You should have received a copy of the GNU General Public License along
     with this program; if not, write to the Free Software Foundation, Inc.,
     51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
- 
-    Details (including contact information) can be found at: 
+
+    Details (including contact information) can be found at:
 
     jpc.sourceforge.net
     or the developer website
@@ -36,10 +36,9 @@ package org.jpc.emulator.pci;
 import org.jpc.emulator.motherboard.IODevice;
 
 /**
- * A PCI device compatible <code>IORegion</code> that is mapped into the io
- * space of the emulated machine.
+ * A PCI device compatible <code>IORegion</code> that is mapped into the io space of the emulated
+ * machine.
  * @author Chris Dennis
  */
-public interface IOPortIORegion extends IODevice, IORegion
-{
+public interface IOPortIORegion extends IODevice, IORegion {
 }

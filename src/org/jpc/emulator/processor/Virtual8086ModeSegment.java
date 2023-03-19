@@ -18,8 +18,8 @@
     You should have received a copy of the GNU General Public License along
     with this program; if not, write to the Free Software Foundation, Inc.,
     51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
- 
-    Details (including contact information) can be found at: 
+
+    Details (including contact information) can be found at:
 
     jpc.sourceforge.net
     or the developer website
@@ -35,10 +35,10 @@ package org.jpc.emulator.processor;
 
 import java.io.DataOutput;
 import java.io.IOException;
+
 import org.jpc.emulator.memory.AddressSpace;
 
 /**
- *
  * @author Ian Preston
  */
 public class Virtual8086ModeSegment extends Segment {
@@ -48,8 +48,7 @@ public class Virtual8086ModeSegment extends Segment {
     private int dpl, rpl;
     private long limit;
 
-    public Virtual8086ModeSegment(AddressSpace memory, int selector, boolean isCode)
-    {
+    public Virtual8086ModeSegment(AddressSpace memory, int selector, boolean isCode) {
         super(memory);
         this.selector = selector;
         base = selector << 4;
@@ -62,8 +61,7 @@ public class Virtual8086ModeSegment extends Segment {
             type = ProtectedModeSegment.TYPE_DATA_WRITABLE | ProtectedModeSegment.TYPE_ACCESSED;
     }
 
-    public Virtual8086ModeSegment(AddressSpace memory, Segment ancestor)
-    {
+    public Virtual8086ModeSegment(AddressSpace memory, Segment ancestor) {
         super(memory);
         selector = ancestor.getSelector();
         base = ancestor.getBase();
@@ -71,8 +69,8 @@ public class Virtual8086ModeSegment extends Segment {
         limit = 0xffffffffL & ancestor.getLimit();
     }
 
-    public void saveState(DataOutput output) throws IOException
-    {
+    @Override
+    public void saveState(DataOutput output) throws IOException {
         output.writeInt(1);
         output.writeInt(selector);
         if (type == (ProtectedModeSegment.TYPE_CODE | ProtectedModeSegment.TYPE_CODE_READABLE | ProtectedModeSegment.TYPE_ACCESSED))
@@ -82,84 +80,84 @@ public class Virtual8086ModeSegment extends Segment {
         output.writeInt(rpl);
     }
 
-    public boolean getDefaultSizeFlag()
-    {
+    @Override
+    public boolean getDefaultSizeFlag() {
         return false;
     }
 
-    public int getLimit()
-    {
+    @Override
+    public int getLimit() {
         return (int)limit;
     }
 
-    public int getBase()
-    {
+    @Override
+    public int getBase() {
         return base;
     }
 
-    public int getSelector()
-    {
+    @Override
+    public int getSelector() {
         return selector;
     }
 
-    public boolean setSelector(int selector)
-    {
+    @Override
+    public boolean setSelector(int selector) {
         this.selector = selector;
         base = selector << 4;
         type = ProtectedModeSegment.TYPE_DATA_WRITABLE | ProtectedModeSegment.TYPE_ACCESSED;
         return true;
     }
 
-    public void checkAddress(int offset)
-    {
+    @Override
+    public void checkAddress(int offset) {
         if ((0xffffffffL & offset) > limit)
             throw ProcessorException.GENERAL_PROTECTION_0;
     }
 
-    public int translateAddressRead(int offset)
-    {
+    @Override
+    public int translateAddressRead(int offset) {
         checkAddress(offset);
         return base + offset;
     }
 
-    public int translateAddressWrite(int offset)
-    {
+    @Override
+    public int translateAddressWrite(int offset) {
         checkAddress(offset);
         return base + offset;
     }
 
-    public int getRPL()
-    {
+    @Override
+    public int getRPL() {
         return rpl;
     }
 
-    public int getType()
-    {
+    @Override
+    public int getType() {
         return type;
     }
 
-    public boolean isPresent()
-    {
+    @Override
+    public boolean isPresent() {
         return true;
     }
 
-    public boolean isSystem()
-    {
+    @Override
+    public boolean isSystem() {
         return false;
     }
 
-    public int getDPL()
-    {
+    @Override
+    public int getDPL() {
         return dpl;
     }
 
-    public void setRPL(int cpl)
-    {
+    @Override
+    public void setRPL(int cpl) {
         rpl = cpl;
     }
 
-    public void printState()
-    {
+    @Override
+    public void printState() {
         System.out.println("VM86 Segment");
         System.out.println("selector: " + Integer.toHexString(selector));
         System.out.println("base: " + Integer.toHexString(base));

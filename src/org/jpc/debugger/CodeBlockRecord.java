@@ -18,8 +18,8 @@
     You should have received a copy of the GNU General Public License along
     with this program; if not, write to the Free Software Foundation, Inc.,
     51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
- 
-    Details (including contact information) can be found at: 
+
+    Details (including contact information) can be found at:
 
     jpc.sourceforge.net
     or the developer website
@@ -33,62 +33,68 @@
 
 package org.jpc.debugger;
 
-import java.lang.reflect.*;
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
 import java.util.Arrays;
 
 import org.jpc.emulator.PC;
 import org.jpc.emulator.execution.Executable;
+import org.jpc.emulator.execution.codeblock.CodeBlock;
+import org.jpc.emulator.execution.codeblock.CodeBlockManager;
+import org.jpc.emulator.execution.codeblock.SpanningDecodeException;
 import org.jpc.emulator.execution.decoder.Instruction;
-import org.jpc.emulator.processor.*;
-import org.jpc.emulator.memory.*;
-import org.jpc.emulator.execution.codeblock.*;
+import org.jpc.emulator.memory.AddressSpace;
+import org.jpc.emulator.memory.LazyCodeBlockMemory;
+import org.jpc.emulator.memory.LinearAddressSpace;
+import org.jpc.emulator.memory.Memory;
+import org.jpc.emulator.memory.PhysicalAddressSpace;
+import org.jpc.emulator.processor.Processor;
+import org.jpc.emulator.processor.ProcessorException;
 import org.jpc.j2se.Option;
 
 public class CodeBlockRecord {
 
-    private static Method getMemory,  convertMemory,  validateBlock;
+    private static Method getMemory, convertMemory, validateBlock;
 
     static {
         try {
-            getMemory = AddressSpace.class.getDeclaredMethod("getReadMemoryBlockAt", new Class[]{Integer.TYPE});
+            getMemory = AddressSpace.class.getDeclaredMethod("getReadMemoryBlockAt", Integer.TYPE);
             getMemory.setAccessible(true);
         } catch (NoSuchMethodException e) {
             getMemory = null;
         }
     }
-    
 
     static {
         try {
-            convertMemory = LazyCodeBlockMemory.class.getDeclaredMethod("convertMemory", new Class[]{Processor.class});
+            convertMemory = LazyCodeBlockMemory.class.getDeclaredMethod("convertMemory", Processor.class);
             convertMemory.setAccessible(true);
         } catch (NoSuchMethodException e) {
             convertMemory = null;
         }
     }
-    
 
     static {
         try {
-            validateBlock = LinearAddressSpace.class.getDeclaredMethod("validateTLBEntryRead", new Class[]{Integer.TYPE});
+            validateBlock = LinearAddressSpace.class.getDeclaredMethod("validateTLBEntryRead", Integer.TYPE);
             validateBlock.setAccessible(true);
         } catch (NoSuchMethodException e) {
             validateBlock = null;
         }
     }
-    private long blockCount,  instructionCount,  decodedCount;
+    private long blockCount, instructionCount, decodedCount;
     private int maxBlockSize;
     private PC pc;
     private Processor processor;
-    private AddressSpace linear,  physical;
+    private AddressSpace linear, physical;
     private CodeBlockHolder[] trace;
     private int[] addresses;
     private CodeBlockListener listener;
 
     public CodeBlockRecord(PC pc) {
         this.pc = pc;
-        this.linear = (AddressSpace) pc.getComponent(LinearAddressSpace.class);
-        this.physical = (AddressSpace) pc.getComponent(PhysicalAddressSpace.class);
+        this.linear = (AddressSpace)pc.getComponent(LinearAddressSpace.class);
+        this.physical = (AddressSpace)pc.getComponent(PhysicalAddressSpace.class);
         this.processor = pc.getProcessor();
         listener = null;
 
@@ -115,7 +121,6 @@ public class CodeBlockRecord {
         }
         maxBlockSize = value;
         CodeBlockManager.BLOCK_LIMIT = value;
-//        LazyCodeBlockMemory.setMaxBlockSize(value);
         System.out.println("failed to set max block size");
     }
 
@@ -123,24 +128,23 @@ public class CodeBlockRecord {
         return true;
     }
 
-    public Memory getMemory(int address)
-    {
+    public Memory getMemory(int address) {
         AddressSpace addressSpace = physical;
         if (processor.isProtectedMode()) {
             addressSpace = linear;
         }
         Memory memory = null;
         try {
-            memory = (Memory) getMemory.invoke(addressSpace, new Object[]{Integer.valueOf(address)});
+            memory = (Memory)getMemory.invoke(addressSpace, Integer.valueOf(address));
         } catch (IllegalAccessException ex) {
             ex.printStackTrace();
         } catch (InvocationTargetException ex) {
             ex.printStackTrace();
         }
 
-        if ((memory == null) && (addressSpace == linear)) {
+        if (memory == null && addressSpace == linear) {
             try {
-                memory = (Memory) validateBlock.invoke(addressSpace, new Object[]{Integer.valueOf(address)});
+                memory = (Memory)validateBlock.invoke(addressSpace, Integer.valueOf(address));
             } catch (IllegalAccessException ex) {
                 ex.printStackTrace();
             } catch (InvocationTargetException ex) {
@@ -158,16 +162,16 @@ public class CodeBlockRecord {
         }
         Memory memory = null;
         try {
-            memory = (Memory) getMemory.invoke(addressSpace, new Object[]{Integer.valueOf(address)});
+            memory = (Memory)getMemory.invoke(addressSpace, Integer.valueOf(address));
         } catch (IllegalAccessException ex) {
             ex.printStackTrace();
         } catch (InvocationTargetException ex) {
             ex.printStackTrace();
         }
 
-        if ((memory == null) && (addressSpace == linear)) {
+        if (memory == null && addressSpace == linear) {
             try {
-                memory = (Memory) validateBlock.invoke(addressSpace, new Object[]{Integer.valueOf(address)});
+                memory = (Memory)validateBlock.invoke(addressSpace, Integer.valueOf(address));
             } catch (IllegalAccessException ex) {
                 ex.printStackTrace();
             } catch (InvocationTargetException ex) {
@@ -176,18 +180,17 @@ public class CodeBlockRecord {
         }
 
         //put in exception handler here??
-        if (memory instanceof LinearAddressSpace.PageFaultWrapper)
-        {
-            LinearAddressSpace.PageFaultWrapper fault = (LinearAddressSpace.PageFaultWrapper) memory;
+        if (memory instanceof LinearAddressSpace.PageFaultWrapper) {
+            LinearAddressSpace.PageFaultWrapper fault = (LinearAddressSpace.PageFaultWrapper)memory;
             return new PageFaultCodeBlock(fault);
         }
-        
+
         if (!(memory instanceof LazyCodeBlockMemory)) {
-                System.err.println("Memory " + memory + " is not code memory. Address " + Integer.toHexString(address));
-                return null;
+            System.err.println("Memory " + memory + " is not code memory. Address " + Integer.toHexString(address));
+            return null;
         }
 
-        LazyCodeBlockMemory codeMemory = (LazyCodeBlockMemory) memory;
+        LazyCodeBlockMemory codeMemory = (LazyCodeBlockMemory)memory;
 
         CodeBlock block = null;
 
@@ -202,8 +205,7 @@ public class CodeBlockRecord {
             } else {
                 block = codeMemory.getRealBlock(offset);
             }
-        } catch (SpanningDecodeException s)
-        {
+        } catch (SpanningDecodeException s) {
             block = s.getBlock();
         }
 
@@ -246,14 +248,13 @@ public class CodeBlockRecord {
         try {
             CodeBlock block = decodeBlockAt(ip);
             CodeBlockHolder priorState = new CodeBlockHolder(block, processor);
-            trace[(int) (blockCount % trace.length)] = priorState;
-            addresses[(int) (blockCount % trace.length)] = ip;
+            trace[(int)(blockCount % trace.length)] = priorState;
+            addresses[(int)(blockCount % trace.length)] = ip;
             blockCount++;
             decodedCount += block.getX86Count();
             return block;
         } catch (ProcessorException e) {
-            if (Option.noScreen.isSet())
-            {
+            if (Option.noScreen.isSet()) {
                 return new PageFaultCodeBlock(e);
             }
             processor.handleProtectedModeException(e);
@@ -261,17 +262,14 @@ public class CodeBlockRecord {
         }
     }
 
-    public class PageFaultCodeBlock implements CodeBlock
-    {
+    public class PageFaultCodeBlock implements CodeBlock {
         private String message;
 
-        public PageFaultCodeBlock(LinearAddressSpace.PageFaultWrapper pf)
-        {
+        public PageFaultCodeBlock(LinearAddressSpace.PageFaultWrapper pf) {
             message = pf.toString();
         }
 
-        public PageFaultCodeBlock(ProcessorException e)
-        {
+        public PageFaultCodeBlock(ProcessorException e) {
             message = e.toString();
         }
 
@@ -317,7 +315,7 @@ public class CodeBlockRecord {
         if (blockCount <= trace.length) {
             return addresses[row];
         }
-        row += (blockCount % trace.length);
+        row += blockCount % trace.length;
         if (row >= trace.length) {
             row -= trace.length;
         }
@@ -328,7 +326,7 @@ public class CodeBlockRecord {
         if (blockCount <= trace.length) {
             return trace[row].block;
         }
-        row += (blockCount % trace.length);
+        row += blockCount % trace.length;
         if (row >= trace.length) {
             row -= trace.length;
         }
@@ -339,7 +337,7 @@ public class CodeBlockRecord {
         if (blockCount <= trace.length) {
             return trace[row].ssESP;
         }
-        row += (blockCount % trace.length);
+        row += blockCount % trace.length;
         if (row >= trace.length) {
             row -= trace.length;
         }
@@ -350,7 +348,7 @@ public class CodeBlockRecord {
         if (blockCount <= trace.length) {
             return trace[row].state[ProcessorState.ESP];
         }
-        row += (blockCount % trace.length);
+        row += blockCount % trace.length;
         if (row >= trace.length) {
             row -= trace.length;
         }
@@ -361,19 +359,18 @@ public class CodeBlockRecord {
         if (blockCount <= trace.length) {
             return trace[row].state[ProcessorState.EBP];
         }
-        row += (blockCount % trace.length);
+        row += blockCount % trace.length;
         if (row >= trace.length) {
             row -= trace.length;
         }
         return trace[row].state[ProcessorState.EBP];
     }
 
-    public int[] getStateAt(int row)
-    {
+    public int[] getStateAt(int row) {
         if (blockCount <= trace.length) {
             return trace[row].state;
         }
-        row += (blockCount % trace.length);
+        row += blockCount % trace.length;
         if (row >= trace.length) {
             row -= trace.length;
         }
@@ -382,25 +379,25 @@ public class CodeBlockRecord {
 
     public int getRowForIndex(long index) {
         if (blockCount <= trace.length) {
-            return (int) index;
+            return (int)index;
         }
         long offset = blockCount - index - 1;
-        if ((offset < 0) || (offset >= trace.length)) {
+        if (offset < 0 || offset >= trace.length) {
             return -1;
         }
-        return trace.length - 1 - (int) offset;
+        return trace.length - 1 - (int)offset;
     }
 
     public long getIndexNumberForRow(int row) {
         if (blockCount <= trace.length) {
             return row;
         }
-        return (int) (blockCount - trace.length + row);
+        return (int)(blockCount - trace.length + row);
     }
 
     public int getTraceLength() {
         if (blockCount <= trace.length) {
-            return (int) blockCount;
+            return (int)blockCount;
         }
         return trace.length;
     }
@@ -410,7 +407,7 @@ public class CodeBlockRecord {
     }
 
     public long getExecutedBlockCount() {
-        return blockCount-1;
+        return blockCount - 1;
     }
 
     public synchronized long getInstructionCount() {
@@ -421,14 +418,12 @@ public class CodeBlockRecord {
         return decodedCount;
     }
 
-    private class CodeBlockHolder
-    {
+    private class CodeBlockHolder {
         CodeBlock block;
         int ssESP;
         int[] state;
 
-        private CodeBlockHolder(CodeBlock b, Processor cpu)
-        {
+        private CodeBlockHolder(CodeBlock b, Processor cpu) {
             block = b;
             boolean is32BitStack = cpu.ss.getDefaultSizeFlag();
             this.ssESP = cpu.ss.getBase() + (is32BitStack ? cpu.r_esp.get32() : 0xffff & cpu.r_esp.get32());

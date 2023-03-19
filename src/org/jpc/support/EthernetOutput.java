@@ -18,8 +18,8 @@
     You should have received a copy of the GNU General Public License along
     with this program; if not, write to the Free Software Foundation, Inc.,
     51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
- 
-    Details (including contact information) can be found at: 
+
+    Details (including contact information) can be found at:
 
     jpc.sourceforge.net
     or the developer website
@@ -33,14 +33,11 @@
 
 package org.jpc.support;
 
-import org.jpc.emulator.pci.peripheral.EthernetCard;
-
 /**
- * 
  * @author Ian Preston
  */
-public abstract class EthernetOutput
-{
+public abstract class EthernetOutput {
     public abstract void sendPacket(byte[] data, int offset, int length);
+
     public abstract byte[] getPacket();
 }

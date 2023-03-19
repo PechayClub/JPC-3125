@@ -18,8 +18,8 @@
     You should have received a copy of the GNU General Public License along
     with this program; if not, write to the Free Software Foundation, Inc.,
     51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
- 
-    Details (including contact information) can be found at: 
+
+    Details (including contact information) can be found at:
 
     jpc.sourceforge.net
     or the developer website
@@ -32,8 +32,8 @@
 */
 
 /**
- * Top level JPC emulation classes, including the most basic of interfaces and
- * the <code>PC</code> class which represents the complete emulation.
+ * Top level JPC emulation classes, including the most basic of interfaces and the <code>PC</code>
+ * class which represents the complete emulation.
  * @author Chris Dennis
  */
 package org.jpc.emulator;

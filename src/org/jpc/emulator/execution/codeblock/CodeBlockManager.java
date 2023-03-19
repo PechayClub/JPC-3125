@@ -18,8 +18,8 @@
     You should have received a copy of the GNU General Public License along
     with this program; if not, write to the Free Software Foundation, Inc.,
     51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
- 
-    Details (including contact information) can be found at: 
+
+    Details (including contact information) can be found at:
 
     jpc.sourceforge.net
     or the developer website
@@ -33,7 +33,7 @@
 
 package org.jpc.emulator.execution.codeblock;
 
-import java.util.logging.*;
+import java.util.logging.Logger;
 
 import org.jpc.emulator.memory.Memory;
 
@@ -47,13 +47,12 @@ public class CodeBlockManager {
 
     private static final Logger LOGGING = Logger.getLogger(CodeBlockManager.class.getName());
     public static volatile int BLOCK_LIMIT = 1000;
-    private CodeBlockFactory realModeChain,  protectedModeChain,  virtual8086ModeChain;
-    private CodeBlockFactory compilingRealModeChain,  compilingProtectedModeChain,  compilingVirtual8086ModeChain;
+    private CodeBlockFactory realModeChain, protectedModeChain, virtual8086ModeChain;
+    private CodeBlockFactory compilingRealModeChain, compilingProtectedModeChain, compilingVirtual8086ModeChain;
     private PeekableMemoryStream byteSourceStream;
     private BackgroundCompiler bgc;
 
-    public CodeBlockManager()
-    {
+    public CodeBlockManager() {
         byteSourceStream = new PeekableMemoryStream();
 
         realModeChain = new DefaultCodeBlockFactory(new OptimisedCompiler(), BLOCK_LIMIT);
@@ -61,38 +60,35 @@ public class CodeBlockManager {
         virtual8086ModeChain = new DefaultCodeBlockFactory(new OptimisedCompiler(), BLOCK_LIMIT);
 
         bgc = new BackgroundCompiler(new OptimisedCompiler(), null);
-        compilingRealModeChain = new DefaultCodeBlockFactory(bgc, BLOCK_LIMIT);//realModeChain;
-        compilingProtectedModeChain = new DefaultCodeBlockFactory(bgc, BLOCK_LIMIT);//protectedModeChain;
+        compilingRealModeChain = new DefaultCodeBlockFactory(bgc, BLOCK_LIMIT);// realModeChain
+        compilingProtectedModeChain = new DefaultCodeBlockFactory(bgc, BLOCK_LIMIT);// protectedModeChain
         compilingVirtual8086ModeChain = virtual8086ModeChain;
     }
-    
-    private RealModeCodeBlock tryRealModeFactory(CodeBlockFactory ff, Memory memory, int offset)
-    {
+
+    private RealModeCodeBlock tryRealModeFactory(CodeBlockFactory ff, Memory memory, int offset) {
         try {
             byteSourceStream.set(memory, offset);
             return ff.getRealModeCodeBlock(byteSourceStream);
         } catch (ArrayIndexOutOfBoundsException e) {
-            throw new SpanningDecodeException(new SpanningRealModeCodeBlock(new CodeBlockFactory[]{realModeChain}));
+            throw new SpanningDecodeException(new SpanningRealModeCodeBlock(new CodeBlockFactory[] { realModeChain }));
         }
     }
 
-    private ProtectedModeCodeBlock tryProtectedModeFactory(CodeBlockFactory ff, Memory memory, int offset, boolean operandSizeFlag)
-    {
+    private ProtectedModeCodeBlock tryProtectedModeFactory(CodeBlockFactory ff, Memory memory, int offset, boolean operandSizeFlag) {
         try {
             byteSourceStream.set(memory, offset);
             return ff.getProtectedModeCodeBlock(byteSourceStream, operandSizeFlag);
         } catch (ArrayIndexOutOfBoundsException e) {
-            throw new SpanningDecodeException(new SpanningProtectedModeCodeBlock(new CodeBlockFactory[]{protectedModeChain}));
+            throw new SpanningDecodeException(new SpanningProtectedModeCodeBlock(new CodeBlockFactory[] { protectedModeChain }));
         }
     }
 
-    private Virtual8086ModeCodeBlock tryVirtual8086ModeFactory(CodeBlockFactory ff, Memory memory, int offset)
-    {
+    private Virtual8086ModeCodeBlock tryVirtual8086ModeFactory(CodeBlockFactory ff, Memory memory, int offset) {
         try {
             byteSourceStream.set(memory, offset);
             return ff.getVirtual8086ModeCodeBlock(byteSourceStream);
         } catch (ArrayIndexOutOfBoundsException e) {
-            throw new SpanningDecodeException(new SpanningVirtual8086ModeCodeBlock(new CodeBlockFactory[]{virtual8086ModeChain}));
+            throw new SpanningDecodeException(new SpanningVirtual8086ModeCodeBlock(new CodeBlockFactory[] { virtual8086ModeChain }));
         }
     }
 

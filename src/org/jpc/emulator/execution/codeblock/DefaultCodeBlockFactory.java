@@ -32,38 +32,34 @@
 */
 package org.jpc.emulator.execution.codeblock;
 
-import org.jpc.emulator.execution.decoder.Disassembler;
 import org.jpc.emulator.execution.decoder.FastDecoder;
 import org.jpc.emulator.execution.decoder.PeekableInputStream;
 
 /**
- *
  * @author Ian Preston
  */
-class DefaultCodeBlockFactory implements CodeBlockFactory
-{
+class DefaultCodeBlockFactory implements CodeBlockFactory {
     private final CodeBlockCompiler compiler;
     private final int limit;
 
-    public DefaultCodeBlockFactory(CodeBlockCompiler compiler, int limit)
-    {
+    public DefaultCodeBlockFactory(CodeBlockCompiler compiler, int limit) {
         this.compiler = compiler;
         this.limit = limit;
     }
 
-    public RealModeCodeBlock getRealModeCodeBlock(PeekableInputStream source)
-    {
-        return compiler.getRealModeCodeBlock(new InterpretedRealModeBlock(FastDecoder.decodeBlock(source, 16, 1)));//Disassembler.disassembleBlock(source, 16, 1)));
+    @Override
+    public RealModeCodeBlock getRealModeCodeBlock(PeekableInputStream source) {
+        return compiler.getRealModeCodeBlock(new InterpretedRealModeBlock(FastDecoder.decodeBlock(source, 16, 1)));
     }
 
-
-    public ProtectedModeCodeBlock getProtectedModeCodeBlock(PeekableInputStream source, boolean operandSize)
-    {
-        return compiler.getProtectedModeCodeBlock(new InterpretedProtectedModeBlock(FastDecoder.decodeBlock(source, operandSize?32:16, 2)));//Disassembler.disassembleBlock(source, operandSize?32:16, 2)));
+    @Override
+    public ProtectedModeCodeBlock getProtectedModeCodeBlock(PeekableInputStream source, boolean operandSize) {
+        return compiler
+            .getProtectedModeCodeBlock(new InterpretedProtectedModeBlock(FastDecoder.decodeBlock(source, operandSize ? 32 : 16, 2)));
     }
 
-    public Virtual8086ModeCodeBlock getVirtual8086ModeCodeBlock(PeekableInputStream source)
-    {
-        return compiler.getVirtual8086ModeCodeBlock(new InterpretedVM86ModeBlock(FastDecoder.decodeBlock(source, 16, 3)));//Disassembler.disassembleBlock(source, 16, 3)));
+    @Override
+    public Virtual8086ModeCodeBlock getVirtual8086ModeCodeBlock(PeekableInputStream source) {
+        return compiler.getVirtual8086ModeCodeBlock(new InterpretedVM86ModeBlock(FastDecoder.decodeBlock(source, 16, 3)));
     }
 }

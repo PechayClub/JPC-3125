@@ -18,8 +18,8 @@
     You should have received a copy of the GNU General Public License along
     with this program; if not, write to the Free Software Foundation, Inc.,
     51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
- 
-    Details (including contact information) can be found at: 
+
+    Details (including contact information) can be found at:
 
     jpc.sourceforge.net
     or the developer website
@@ -31,20 +31,21 @@
     End of licence header
 */
 
-package org.jpc.support;
+package org.jpc.emulator.block.backing;
 
-import java.io.*;
-import java.util.logging.*;
+import java.io.IOException;
+import java.io.RandomAccessFile;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 /**
  * A <code>SeekableIODevice</code> backed by a file on local disk.
  * @author Mike Moleschi
  * @author Chris Dennis
  */
-public class FileBackedSeekableIODevice implements SeekableIODevice
-{
+public class FileBackedSeekableIODevice implements SeekableIODevice {
     private static final Logger LOGGING = Logger.getLogger(FileBackedSeekableIODevice.class.getName());
-    
+
     private String fileName;
     private RandomAccessFile image;
     private boolean readOnly;
@@ -52,11 +53,9 @@ public class FileBackedSeekableIODevice implements SeekableIODevice
     /**
      * Constructs an unconfigured instance.
      * <p>
-     * This must be configured by calling <code>configure</code> before first
-     * use.
+     * This must be configured by calling <code>configure</code> before first use.
      */
-    public FileBackedSeekableIODevice()
-    {
+    public FileBackedSeekableIODevice() {
     }
 
     /**
@@ -64,8 +63,8 @@ public class FileBackedSeekableIODevice implements SeekableIODevice
      * @param spec file path
      * @throws java.io.IOException if the file cannot be opened
      */
-    public void configure(String spec) throws IOException
-    {
+    @Override
+    public void configure(String spec) throws IOException {
         fileName = spec;
 
         try {
@@ -87,29 +86,28 @@ public class FileBackedSeekableIODevice implements SeekableIODevice
      * Constructs an instance using the specified file as backing.
      * @param file file path
      */
-    public FileBackedSeekableIODevice(String file) throws IOException
-    {
+    public FileBackedSeekableIODevice(String file) throws IOException {
         configure(file);
     }
 
-    public void seek(long offset) throws IOException
-    {
+    @Override
+    public void seek(long offset) throws IOException {
         image.seek(offset);
     }
 
-    public int write(byte[] data, int offset, int length) throws IOException
-    {
+    @Override
+    public int write(byte[] data, int offset, int length) throws IOException {
         image.write(data, offset, length);
         return length;
     }
 
-    public int read(byte[] data, int offset, int length) throws IOException
-    {
+    @Override
+    public int read(byte[] data, int offset, int length) throws IOException {
         return image.read(data, offset, length);
     }
 
-    public long length()
-    {
+    @Override
+    public long length() {
         try {
             return image.length();
         } catch (IOException e) {
@@ -117,18 +115,18 @@ public class FileBackedSeekableIODevice implements SeekableIODevice
         }
     }
 
-    public void close() throws IOException
-    {
+    @Override
+    public void close() throws IOException {
         image.close();
     }
-    
-    public boolean readOnly()
-    {
+
+    @Override
+    public boolean readOnly() {
         return readOnly;
     }
 
-    public String toString()
-    {
+    @Override
+    public String toString() {
         return fileName;
     }
 }

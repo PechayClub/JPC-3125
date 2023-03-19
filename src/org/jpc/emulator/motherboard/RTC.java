@@ -18,8 +18,8 @@
     You should have received a copy of the GNU General Public License along
     with this program; if not, write to the Free Software Foundation, Inc.,
     51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
- 
-    Details (including contact information) can be found at: 
+
+    Details (including contact information) can be found at:
 
     jpc.sourceforge.net
     or the developer website
@@ -33,21 +33,27 @@
 
 package org.jpc.emulator.motherboard;
 
-import org.jpc.emulator.*;
-import org.jpc.emulator.peripheral.FloppyController;
-import org.jpc.support.*;
-
-import java.io.*;
+import java.io.DataInput;
+import java.io.DataOutput;
+import java.io.IOException;
 import java.util.Calendar;
+
+import org.jpc.emulator.AbstractHardwareComponent;
+import org.jpc.emulator.HardwareComponent;
+import org.jpc.emulator.Timer;
+import org.jpc.emulator.TimerResponsive;
+import org.jpc.emulator.block.BlockDevice;
+import org.jpc.emulator.peripheral.FloppyController;
+import org.jpc.support.Clock;
+import org.jpc.support.DriveSet;
 
 /**
  * Emulation of an MC146818 Real-time Clock.
- * @see <a href="http://courses.ece.uiuc.edu/ece391/references/mc146818.pdf">
- * MC146818A - Datasheet</a>
+ * @see <a href="http://courses.ece.uiuc.edu/ece391/references/mc146818.pdf"> MC146818A -
+ * Datasheet</a>
  * @author Chris Dennis
  */
-public class RTC extends AbstractHardwareComponent implements IODevice
-{
+public class RTC extends AbstractHardwareComponent implements IODevice {
     private static final int RTC_SECONDS = 0;
     private static final int RTC_SECONDS_ALARM = 1;
     private static final int RTC_MINUTES = 2;
@@ -101,29 +107,32 @@ public class RTC extends AbstractHardwareComponent implements IODevice
     private boolean drivesInited;
     private boolean floppiesInited;
     private final Calendar startTime;
+    private final int ramSize;
 
     /**
-     * Construct a new RTC which will register at ioports <code>ioPort</code>
-     * and <code>ioPort+1</code>.  Interrupt requests will be sent on the
-     * supplied channel number.
+     * Construct a new RTC which will register at ioports <code>ioPort</code> and <code>ioPort+1</code>.
+     * Interrupt requests will be sent on the supplied channel number.
      * @param ioPort ioport base address.
      * @param irq interrupt channel number.
+     * @param start starting time of the system as Calendar
+     * @param ramSize size of system ram
      */
-    public RTC(int ioPort, int irq, Calendar start)
-    {
+    public RTC(int ioPort, int irq, Calendar start, int ramSize) {
+        this.ioPortBase = ioPort;
+        this.irq = irq;
         this.startTime = start;
+        this.ramSize = ramSize;
+
         bootType = null;
         ioportRegistered = false;
         drivesInited = false;
         floppiesInited = false;
 
-        ioPortBase = ioPort;
-        this.irq = irq;
         cmosData = new byte[128];
         cmosData[RTC_REG_A] = 0x26;
         cmosData[RTC_REG_B] = 0x02;
         cmosData[RTC_REG_C] = 0x00;
-        cmosData[RTC_REG_D] = (byte) 0x80;
+        cmosData[RTC_REG_D] = (byte)0x80;
 
         periodicCallback = new PeriodicCallback();
         secondCallback = new SecondCallback();
@@ -131,19 +140,18 @@ public class RTC extends AbstractHardwareComponent implements IODevice
     }
 
     /**
-     * Construct a new RTC which will register at ioports <code>ioPort</code>
-     * and <code>ioPort+1</code>.  Interrupt requests will be sent on the
-     * supplied channel number.
+     * Construct a new RTC which will register at ioports <code>ioPort</code> and <code>ioPort+1</code>.
+     * Interrupt requests will be sent on the supplied channel number.
      * @param ioPort ioport base address.
      * @param irq interrupt channel number.
+     * @param ramSize size of system ram
      */
-    public RTC(int ioPort, int irq)
-    {
-        this(ioPort, irq, Calendar.getInstance());
+    public RTC(int ioPort, int irq, int ramSize) {
+        this(ioPort, irq, Calendar.getInstance(), ramSize);
     }
 
-    public void saveState(DataOutput output) throws IOException
-    {
+    @Override
+    public void saveState(DataOutput output) throws IOException {
         output.writeInt(cmosData.length);
         output.write(cmosData);
         output.writeByte(cmosIndex);
@@ -162,8 +170,8 @@ public class RTC extends AbstractHardwareComponent implements IODevice
         delayedSecondTimer.saveState(output);
     }
 
-    public void loadState(DataInput input) throws IOException
-    {
+    @Override
+    public void loadState(DataInput input) throws IOException {
         ioportRegistered = false;
         int len = input.readInt();
         input.readFully(cmosData, 0, len);
@@ -186,123 +194,115 @@ public class RTC extends AbstractHardwareComponent implements IODevice
         delayedSecondTimer.loadState(input);
     }
 
-    private static final long scale64(long input, int multiply, int divide)
-    {
-        //return (BigInteger.valueOf(input).multiply(BigInteger.valueOf(multiply)).divide(BigInteger.valueOf(divide))).longValue();
-
-        long rl = (0xffffffffl & input) * multiply;
+    private static final long scale64(long input, int multiply, int divide) {
+        long rl = (0xffffffffL & input) * multiply;
         long rh = (input >>> 32) * multiply;
 
-        rh += (rl >> 32);
+        rh += rl >> 32;
 
-        long resultHigh = 0xffffffffl & (rh / divide);
-        long resultLow = 0xffffffffl & ((((rh % divide) << 32) + (rl & 0xffffffffl)) / divide);
+        long resultHigh = 0xffffffffL & rh / divide;
+        long resultLow = 0xffffffffL & ((rh % divide << 32) + (rl & 0xffffffffL)) / divide;
 
-        return (resultHigh << 32) | resultLow;
+        return resultHigh << 32 | resultLow;
     }
 
-    private void init()
-    {
-        //Calendar now = Calendar.getInstance();
+    private void init() {
         this.setTime(startTime);
         int val = this.toBCD(startTime.get(Calendar.YEAR) / 100);
-        cmosData[RTC_REG_IBM_CENTURY_BYTE] = (byte) val;
-        cmosData[RTC_REG_IBM_PS2_CENTURY_BYTE] = (byte) val;
+        cmosData[RTC_REG_IBM_CENTURY_BYTE] = (byte)val;
+        cmosData[RTC_REG_IBM_PS2_CENTURY_BYTE] = (byte)val;
 
         /* memory size */
         val = 640; /* base memory in K */
-        cmosData[0x15] = (byte) val;
-        cmosData[0x16] = (byte) (val >>> 8);
+        cmosData[0x15] = (byte)val;
+        cmosData[0x16] = (byte)(val >>> 8);
 
-        int ramSize = PC.SYS_RAM_SIZE;
-        val = (ramSize / 1024) - 1024;
-        if (val > 65535) val = 65535;
-        cmosData[0x17] = (byte) val;
-        cmosData[0x18] = (byte) (val >>> 8);
-        cmosData[0x30] = (byte) val;
-        cmosData[0x31] = (byte) (val >>> 8);
+        val = ramSize / 1024 - 1024;
+        if (val > 65535)
+            val = 65535;
+        cmosData[0x17] = (byte)val;
+        cmosData[0x18] = (byte)(val >>> 8);
+        cmosData[0x30] = (byte)val;
+        cmosData[0x31] = (byte)(val >>> 8);
 
-        if (ramSize > (16 * 1024 * 1024))
-            val = (ramSize / 65536) - ((16 * 1024 * 1024) / 65536);
+        if (ramSize > 16 * 1024 * 1024)
+            val = ramSize / 65536 - 16 * 1024 * 1024 / 65536;
         else
             val = 0;
-        if (val > 65535) val = 65535;
-        cmosData[0x34] = (byte) val;
-        cmosData[0x35] = (byte) (val >>> 8);
+        if (val > 65535)
+            val = 65535;
+        cmosData[0x34] = (byte)val;
+        cmosData[0x35] = (byte)(val >>> 8);
 
         switch (bootType) {
-            case FLOPPY:
-                cmosData[0x3d] = (byte) 0x01; /* floppy boot */
-                break;
-            default:
-            case HARD_DRIVE:
-                cmosData[0x3d] = (byte) 0x02; /* hard drive boot */
-                break;
-            case CDROM:
-                cmosData[0x3d] = (byte) 0x03; /* CD-ROM boot */
-                break;
+        case FLOPPY:
+            cmosData[0x3d] = (byte)0x01; /* floppy boot */
+            break;
+        default:
+        case HARD_DRIVE:
+            cmosData[0x3d] = (byte)0x02; /* hard drive boot */
+            break;
+        case CDROM:
+            cmosData[0x3d] = (byte)0x03; /* CD-ROM boot */
+            break;
         }
         cmosData[0x2d] = 0x20;
         int sum = 0;
-        for (int i=0x10; i<=0x2d; i++)
+        for (int i = 0x10; i <= 0x2d; i++)
             sum += cmosData[i] & 0xff;
-        cmosData[REG_CSUM_HIGH] = (byte) (sum >> 8);
-        cmosData[REG_CSUM_LOW] = (byte) sum;
+        cmosData[REG_CSUM_HIGH] = (byte)(sum >> 8);
+        cmosData[REG_CSUM_LOW] = (byte)sum;
     }
 
-    private void cmosInitHD(DriveSet drives)
-    {
+    private void cmosInitHD(DriveSet drives) {
         BlockDevice drive0 = drives.getHardDrive(0);
         BlockDevice drive1 = drives.getHardDrive(1);
 
-
-        cmosData[0x12] = (byte) (((drive0 != null) ? 0xf0 : 0) | ((drive1 != null) ? 0x0f : 0));
+        cmosData[0x12] = (byte)((drive0 != null ? 0xf0 : 0) | (drive1 != null ? 0x0f : 0));
 
         if (drive0 != null) {
-            cmosData[0x19] = (byte) 47;
-            cmosData[0x1b] = (byte) drive0.getCylinders();
-            cmosData[0x1b + 1] = (byte) (drive0.getCylinders() >>> 8);
-            cmosData[0x1b + 2] = (byte) drive0.getHeads();
-            cmosData[0x1b + 3] = (byte) 0xff;
-            cmosData[0x1b + 4] = (byte) 0xff;
-            cmosData[0x1b + 5] = (byte) (0xc0 | ((drive0.getHeads() > 8) ? 0x8 : 0));
-            cmosData[0x1b + 6] = (byte) drive0.getCylinders();
-            cmosData[0x1b + 7] = (byte) (drive0.getCylinders() >>> 8);
-            cmosData[0x1b + 8] = (byte) drive0.getSectors();
+            cmosData[0x19] = (byte)47;
+            cmosData[0x1b] = (byte)drive0.getCylinders();
+            cmosData[0x1b + 1] = (byte)(drive0.getCylinders() >>> 8);
+            cmosData[0x1b + 2] = (byte)drive0.getHeads();
+            cmosData[0x1b + 3] = (byte)0xff;
+            cmosData[0x1b + 4] = (byte)0xff;
+            cmosData[0x1b + 5] = (byte)(0xc0 | (drive0.getHeads() > 8 ? 0x8 : 0));
+            cmosData[0x1b + 6] = (byte)drive0.getCylinders();
+            cmosData[0x1b + 7] = (byte)(drive0.getCylinders() >>> 8);
+            cmosData[0x1b + 8] = (byte)drive0.getSectors();
         }
         if (drive1 != null) {
-            cmosData[0x1a] = (byte) 47;
-            cmosData[0x24] = (byte) drive1.getCylinders();
-            cmosData[0x24 + 1] = (byte) (drive1.getCylinders() >>> 8);
-            cmosData[0x24 + 2] = (byte) drive1.getHeads();
-            cmosData[0x24 + 3] = (byte) 0xff;
-            cmosData[0x24 + 4] = (byte) 0xff;
-            cmosData[0x24 + 5] = (byte) (0xc0 | ((drive1.getHeads() > 8) ? 0x8 : 0));
-            cmosData[0x24 + 6] = (byte) drive1.getCylinders();
-            cmosData[0x24 + 7] = (byte) (drive1.getCylinders() >>> 8);
-            cmosData[0x24 + 8] = (byte) drive1.getSectors();
+            cmosData[0x1a] = (byte)47;
+            cmosData[0x24] = (byte)drive1.getCylinders();
+            cmosData[0x24 + 1] = (byte)(drive1.getCylinders() >>> 8);
+            cmosData[0x24 + 2] = (byte)drive1.getHeads();
+            cmosData[0x24 + 3] = (byte)0xff;
+            cmosData[0x24 + 4] = (byte)0xff;
+            cmosData[0x24 + 5] = (byte)(0xc0 | (drive1.getHeads() > 8 ? 0x8 : 0));
+            cmosData[0x24 + 6] = (byte)drive1.getCylinders();
+            cmosData[0x24 + 7] = (byte)(drive1.getCylinders() >>> 8);
+            cmosData[0x24 + 8] = (byte)drive1.getSectors();
         }
         int value = 0;
         for (int i = 0; i < 4; i++)
             if (drives.getHardDrive(i) != null) {
                 int translation;
-                if ((drives.getHardDrive(i).getCylinders() <= 1024) &&
-                        (drives.getHardDrive(i).getHeads() <= 16) &&
-                        (drives.getHardDrive(i).getSectors() <= 63))
+                if (drives.getHardDrive(i).getCylinders() <= 1024 && drives.getHardDrive(i).getHeads() <= 16
+                    && drives.getHardDrive(i).getSectors() <= 63)
                     /* No Translation. */
                     translation = 0;
                 else
                     /* LBA Translation */
                     translation = 1;
-                value |= translation << (i * 2);
+                value |= translation << i * 2;
             }
-        cmosData[0x39] = (byte) value;
+        cmosData[0x39] = (byte)value;
     }
 
-    private void cmosInitFloppy(FloppyController fdc)
-    {
-        int val = (cmosGetFDType(fdc, 0) << 4) | cmosGetFDType(fdc, 1);
-        cmosData[0x10] = (byte) val;
+    private void cmosInitFloppy(FloppyController fdc) {
+        int val = cmosGetFDType(fdc, 0) << 4 | cmosGetFDType(fdc, 1);
+        cmosData[0x10] = (byte)val;
 
         int num = 0;
         val = 0;
@@ -311,81 +311,78 @@ public class RTC extends AbstractHardwareComponent implements IODevice
         if (fdc.getDriveType(1) != FloppyController.DriveType.DRIVE_NONE)
             num++;
         switch (num) {
-            case 0:
-                break;
-            case 1:
-                val |= 0x01;
-                break;
-            case 2:
-                val |= 0x41;
-                break;
+        case 0:
+            break;
+        case 1:
+            val |= 0x01;
+            break;
+        case 2:
+            val |= 0x41;
+            break;
         }
         val |= 0x02; // Have FPU
         val |= 0x04; // Have PS2 Mouse
-        cmosData[RTC_REG_EQUIPMENT_BYTE] = (byte) val;
+        cmosData[RTC_REG_EQUIPMENT_BYTE] = (byte)val;
     }
 
-    private int cmosGetFDType(FloppyController fdc, int drive)
-    {
+    private int cmosGetFDType(FloppyController fdc, int drive) {
         switch (fdc.getDriveType(drive)) {
-            case DRIVE_144:
-                return 4;
-            case DRIVE_288:
-                return 5;
-            case DRIVE_120:
-                return 2;
-            default:
-                return 0;
+        case DRIVE_144:
+            return 4;
+        case DRIVE_288:
+            return 5;
+        case DRIVE_120:
+            return 2;
+        default:
+            return 0;
         }
     }
 
-    public int[] ioPortsRequested()
-    {
+    @Override
+    public int[] ioPortsRequested() {
         int base = ioPortBase;
-        return new int[]{base, base + 1};
+        return new int[] { base, base + 1 };
     }
 
-    public int ioPortRead8(int address)
-    {
+    @Override
+    public int ioPortRead8(int address) {
         return 0xff & cmosIOPortRead(address);
     }
 
-    public int ioPortRead16(int address)
-    {
-        return (0xff & ioPortRead8(address)) | (0xff00 & (ioPortRead8(address + 1) << 8));
+    @Override
+    public int ioPortRead16(int address) {
+        return 0xff & ioPortRead8(address) | 0xff00 & ioPortRead8(address + 1) << 8;
     }
 
-    public int ioPortRead32(int address)
-    {
-        return (0xffff & ioPortRead16(address)) | (0xffff0000 & (ioPortRead16(address + 2) << 16));
+    @Override
+    public int ioPortRead32(int address) {
+        return 0xffff & ioPortRead16(address) | 0xffff0000 & ioPortRead16(address + 2) << 16;
     }
 
-    public void ioPortWrite8(int address, int data)
-    {
+    @Override
+    public void ioPortWrite8(int address, int data) {
         cmosIOPortWrite(address, 0xff & data);
     }
 
-    public void ioPortWrite16(int address, int data)
-    {
+    @Override
+    public void ioPortWrite16(int address, int data) {
         this.ioPortWrite8(address, data);
         this.ioPortWrite8(address + 1, data >> 8);
     }
 
-    public void ioPortWrite32(int address, int data)
-    {
+    @Override
+    public void ioPortWrite32(int address, int data) {
         this.ioPortWrite16(address, data);
         this.ioPortWrite16(address + 2, data >> 16);
     }
 
-    private void periodicUpdate()
-    {
+    private void periodicUpdate() {
         this.timerUpdate(nextPeriodicTime);
         cmosData[RTC_REG_C] |= 0xc0;
         irqDevice.setIRQ(irq, 1);
     }
 
-    private void secondUpdate()
-    {
+    private void secondUpdate() {
         if ((cmosData[RTC_REG_A] & 0x70) != 0x20) {
             nextSecondTime += timeSource.getTickRate();
             secondTimer.setExpiry(nextSecondTime);
@@ -396,26 +393,22 @@ public class RTC extends AbstractHardwareComponent implements IODevice
                 cmosData[RTC_REG_A] |= REG_A_UIP;
 
             /* should be 244us = 8 / 32768 second, but currently the timers do not have the necessary resolution. */
-            long delay = (timeSource.getTickRate() * 1) / 100;
+            long delay = timeSource.getTickRate() * 1 / 100;
             if (delay < 1)
                 delay = 1;
             delayedSecondTimer.setExpiry(nextSecondTime + delay);
         }
     }
 
-    private void delayedSecondUpdate()
-    {
+    private void delayedSecondUpdate() {
         if (0 == (cmosData[RTC_REG_B] & REG_B_SET))
             this.timeToMemory();
 
         /* check alarm */
         if (0 != (cmosData[RTC_REG_B] & REG_B_AIE))
-            if (((cmosData[RTC_SECONDS_ALARM] & 0xc0) == 0xc0 ||
-                    cmosData[RTC_SECONDS_ALARM] == currentTime.get(Calendar.SECOND)) &&
-                    ((cmosData[RTC_MINUTES_ALARM] & 0xc0) == 0xc0 ||
-                    cmosData[RTC_MINUTES_ALARM] == currentTime.get(Calendar.MINUTE)) &&
-                    ((cmosData[RTC_HOURS_ALARM] & 0xc0) == 0xc0 ||
-                    cmosData[RTC_HOURS_ALARM] == currentTime.get(Calendar.HOUR_OF_DAY))) {
+            if (((cmosData[RTC_SECONDS_ALARM] & 0xc0) == 0xc0 || cmosData[RTC_SECONDS_ALARM] == currentTime.get(Calendar.SECOND))
+                && ((cmosData[RTC_MINUTES_ALARM] & 0xc0) == 0xc0 || cmosData[RTC_MINUTES_ALARM] == currentTime.get(Calendar.MINUTE))
+                && ((cmosData[RTC_HOURS_ALARM] & 0xc0) == 0xc0 || cmosData[RTC_HOURS_ALARM] == currentTime.get(Calendar.HOUR_OF_DAY))) {
 
                 cmosData[RTC_REG_C] |= 0xa0;
                 irqDevice.setIRQ(irq, 1);
@@ -433,105 +426,98 @@ public class RTC extends AbstractHardwareComponent implements IODevice
         secondTimer.setExpiry(nextSecondTime);
     }
 
-    private void timerUpdate(long currentTime)
-    {
+    private void timerUpdate(long currentTime) {
         int periodCode = cmosData[RTC_REG_A] & 0x0f;
-        if ((periodCode != 0) && (0 != (cmosData[RTC_REG_B] & REG_B_PIE))) {
+        if (periodCode != 0 && 0 != (cmosData[RTC_REG_B] & REG_B_PIE)) {
             if (periodCode <= 2)
                 periodCode += 7;
             /* period in 32 kHz cycles */
-            int period = 1 << (periodCode - 1);
+            int period = 1 << periodCode - 1;
             /* compute 32 kHz clock */
-            long currentClock = scale64(currentTime, 32768, (int) timeSource.getTickRate());
+            long currentClock = scale64(currentTime, 32768, (int)timeSource.getTickRate());
             long nextIRQClock = (currentClock & ~(period - 1)) + period;
-            nextPeriodicTime = scale64(nextIRQClock, (int) timeSource.getTickRate(), 32768) + 1;
+            nextPeriodicTime = scale64(nextIRQClock, (int)timeSource.getTickRate(), 32768) + 1;
             periodicTimer.setExpiry(nextPeriodicTime);
         } else
             periodicTimer.disable();
     }
 
-    private void nextSecond()
-    {
-        //currentTime = Calendar.getInstance();
+    private void nextSecond() {
         currentTime.add(Calendar.SECOND, 1);
     }
 
-    private void cmosIOPortWrite(int address, int data)
-    {
+    private void cmosIOPortWrite(int address, int data) {
         if ((address & 1) == 0)
-            cmosIndex = (byte) (data & 0x7f);
+            cmosIndex = (byte)(data & 0x7f);
         else
             switch (this.cmosIndex) {
-                case RTC_SECONDS_ALARM:
-                case RTC_MINUTES_ALARM:
-                case RTC_HOURS_ALARM:
-                    /* XXX: not supported */
-                    cmosData[this.cmosIndex] = (byte) data;
-                    break;
-                case RTC_SECONDS:
-                case RTC_MINUTES:
-                case RTC_HOURS:
-                case RTC_DAY_OF_WEEK:
-                case RTC_DAY_OF_MONTH:
-                case RTC_MONTH:
-                case RTC_YEAR:
-                    cmosData[this.cmosIndex] = (byte) data;
-                    /* if in set mode, do not update the time */
-                    if (0 == (cmosData[RTC_REG_B] & REG_B_SET))
-                        this.memoryToTime();
-                    break;
-                case RTC_REG_A:
-                    /* UIP bit is read only */
-                    cmosData[RTC_REG_A] = (byte) ((data & ~REG_A_UIP) | (cmosData[RTC_REG_A] & REG_A_UIP));
-                    this.timerUpdate(timeSource.getEmulatedNanos());
-                    break;
-                case RTC_REG_B:
-                    if (0 != (data & REG_B_SET)) {
-                        /* set mode: reset UIP mode */
-                        cmosData[RTC_REG_A] &= ~REG_A_UIP;
-                        data &= ~REG_B_UIE;
-                    } else
-                        /* if disabling set mode, update the time */
-                        if (0 != (cmosData[RTC_REG_B] & REG_B_SET))
-                            this.memoryToTime();
-                    cmosData[RTC_REG_B] = (byte) data;
-                    this.timerUpdate(timeSource.getEmulatedNanos());
-                    break;
-                case RTC_REG_C:
-                case RTC_REG_D:
-                    /* cannot write to them */
-                    break;
-                default:
-                    cmosData[this.cmosIndex] = (byte) data;
-                    break;
+            case RTC_SECONDS_ALARM:
+            case RTC_MINUTES_ALARM:
+            case RTC_HOURS_ALARM:
+                /* XXX: not supported */
+                cmosData[this.cmosIndex] = (byte)data;
+                break;
+            case RTC_SECONDS:
+            case RTC_MINUTES:
+            case RTC_HOURS:
+            case RTC_DAY_OF_WEEK:
+            case RTC_DAY_OF_MONTH:
+            case RTC_MONTH:
+            case RTC_YEAR:
+                cmosData[this.cmosIndex] = (byte)data;
+                /* if in set mode, do not update the time */
+                if (0 == (cmosData[RTC_REG_B] & REG_B_SET))
+                    this.memoryToTime();
+                break;
+            case RTC_REG_A:
+                /* UIP bit is read only */
+                cmosData[RTC_REG_A] = (byte)(data & ~REG_A_UIP | cmosData[RTC_REG_A] & REG_A_UIP);
+                this.timerUpdate(timeSource.getEmulatedNanos());
+                break;
+            case RTC_REG_B:
+                if (0 != (data & REG_B_SET)) {
+                    /* set mode: reset UIP mode */
+                    cmosData[RTC_REG_A] &= ~REG_A_UIP;
+                    data &= ~REG_B_UIE;
+                } else
+                /* if disabling set mode, update the time */
+                if (0 != (cmosData[RTC_REG_B] & REG_B_SET))
+                    this.memoryToTime();
+                cmosData[RTC_REG_B] = (byte)data;
+                this.timerUpdate(timeSource.getEmulatedNanos());
+                break;
+            case RTC_REG_C:
+            case RTC_REG_D:
+                /* cannot write to them */
+                break;
+            default:
+                cmosData[this.cmosIndex] = (byte)data;
+                break;
             }
     }
 
-    private int cmosIOPortRead(int address)
-    {
+    private int cmosIOPortRead(int address) {
         if ((address & 1) == 0)
             return 0xff;
         else
             switch (this.cmosIndex) {
-                case RTC_REG_C:
-                    int ret = cmosData[RTC_REG_C];
-                    irqDevice.setIRQ(irq, 0);
-                    cmosData[RTC_REG_C] = (byte) 0x00;
-                    return ret;
-                default:
-                    return cmosData[this.cmosIndex];
+            case RTC_REG_C:
+                int ret = cmosData[RTC_REG_C];
+                irqDevice.setIRQ(irq, 0);
+                cmosData[RTC_REG_C] = (byte)0x00;
+                return ret;
+            default:
+                return cmosData[this.cmosIndex];
             }
     }
 
-    private void setTime(Calendar date)
-    {
+    private void setTime(Calendar date) {
         this.currentTime = Calendar.getInstance(date.getTimeZone());
         this.currentTime.setTime(date.getTime());
         this.timeToMemory();
     }
 
-    private void memoryToTime()
-    {
+    private void memoryToTime() {
         currentTime.set(Calendar.SECOND, this.fromBCD(cmosData[RTC_SECONDS]));
         currentTime.set(Calendar.MINUTE, this.fromBCD(cmosData[RTC_MINUTES]));
         currentTime.set(Calendar.HOUR_OF_DAY, this.fromBCD(cmosData[RTC_HOURS] & 0x7f));
@@ -544,23 +530,22 @@ public class RTC extends AbstractHardwareComponent implements IODevice
         currentTime.set(Calendar.YEAR, this.fromBCD(cmosData[RTC_YEAR]) + 2000); //is this offset correct?
     }
 
-    private void timeToMemory()
-    {
-        cmosData[RTC_SECONDS] = (byte) this.toBCD(currentTime.get(Calendar.SECOND));
-        cmosData[RTC_MINUTES] = (byte) this.toBCD(currentTime.get(Calendar.MINUTE));
+    private void timeToMemory() {
+        cmosData[RTC_SECONDS] = (byte)this.toBCD(currentTime.get(Calendar.SECOND));
+        cmosData[RTC_MINUTES] = (byte)this.toBCD(currentTime.get(Calendar.MINUTE));
 
         if (0 != (cmosData[RTC_REG_B] & 0x02)) /* 24 hour format */
-            cmosData[RTC_HOURS] = (byte) this.toBCD(currentTime.get(Calendar.HOUR_OF_DAY));
+            cmosData[RTC_HOURS] = (byte)this.toBCD(currentTime.get(Calendar.HOUR_OF_DAY));
         else { /* 12 hour format */
-            cmosData[RTC_HOURS] = (byte) this.toBCD(currentTime.get(Calendar.HOUR));
+            cmosData[RTC_HOURS] = (byte)this.toBCD(currentTime.get(Calendar.HOUR));
             if (currentTime.get(Calendar.AM_PM) == Calendar.PM)
                 cmosData[RTC_HOURS] |= 0x80;
         }
 
-        cmosData[RTC_DAY_OF_WEEK] = (byte) this.toBCD(currentTime.get(Calendar.DAY_OF_WEEK));
-        cmosData[RTC_DAY_OF_MONTH] = (byte) this.toBCD(currentTime.get(Calendar.DAY_OF_MONTH));
-        cmosData[RTC_MONTH] = (byte) this.toBCD(currentTime.get(Calendar.MONTH) + 1);
-        cmosData[RTC_YEAR] = (byte) this.toBCD(currentTime.get(Calendar.YEAR) % 100);
+        cmosData[RTC_DAY_OF_WEEK] = (byte)this.toBCD(currentTime.get(Calendar.DAY_OF_WEEK));
+        cmosData[RTC_DAY_OF_MONTH] = (byte)this.toBCD(currentTime.get(Calendar.DAY_OF_MONTH));
+        cmosData[RTC_MONTH] = (byte)this.toBCD(currentTime.get(Calendar.MONTH) + 1);
+        cmosData[RTC_YEAR] = (byte)this.toBCD(currentTime.get(Calendar.YEAR) % 100);
     }
 
     private int toBCD(int a) //Binary Coded Decimal
@@ -569,7 +554,7 @@ public class RTC extends AbstractHardwareComponent implements IODevice
         if (0 != (cmosData[RTC_REG_B] & 0x04))
             return a;
         else
-            return ((a / 10) << 4) | (a % 10);
+            return a / 10 << 4 | a % 10;
     }
 
     private int fromBCD(int a) //Binary Coded Decimal
@@ -578,16 +563,16 @@ public class RTC extends AbstractHardwareComponent implements IODevice
         if (0 != (cmosData[RTC_REG_B] & 0x04))
             return a;
         else
-            return ((a >> 4) * 10) + (a & 0x0f);
+            return (a >> 4) * 10 + (a & 0x0f);
     }
 
-    public boolean initialised()
-    {
-        return ((irqDevice != null) && (timeSource != null) && ioportRegistered && drivesInited && floppiesInited && (bootType != null));
+    @Override
+    public boolean initialised() {
+        return irqDevice != null && timeSource != null && ioportRegistered && drivesInited && floppiesInited && bootType != null;
     }
 
-    public void reset()
-    {
+    @Override
+    public void reset() {
         irqDevice = null;
         timeSource = null;
         ioportRegistered = false;
@@ -599,87 +584,85 @@ public class RTC extends AbstractHardwareComponent implements IODevice
         cmosData[RTC_REG_A] = 0x26;
         cmosData[RTC_REG_B] = 0x02;
         cmosData[RTC_REG_C] = 0x00;
-        cmosData[RTC_REG_D] = (byte) 0x80;
+        cmosData[RTC_REG_D] = (byte)0x80;
 
         periodicCallback = new PeriodicCallback();
         secondCallback = new SecondCallback();
         delayedSecondCallback = new DelayedSecondCallback();
     }
 
+    private class PeriodicCallback implements TimerResponsive {
 
-
-    private class PeriodicCallback implements TimerResponsive
-    {
-
-        public void callback()
-        {
+        @Override
+        public void callback() {
             RTC.this.periodicUpdate();
         }
 
+        @Override
         public int getType() {
             return 3;
         }
     }
 
-    private class SecondCallback implements TimerResponsive
-    {
+    private class SecondCallback implements TimerResponsive {
 
-        public void callback()
-        {
+        @Override
+        public void callback() {
             RTC.this.secondUpdate();
         }
 
+        @Override
         public int getType() {
             return 4;
         }
     }
 
-    private class DelayedSecondCallback implements TimerResponsive
-    {
+    private class DelayedSecondCallback implements TimerResponsive {
 
-        public void callback()
-        {
+        @Override
+        public void callback() {
             RTC.this.delayedSecondUpdate();
         }
 
+        @Override
         public int getType() {
             return 5;
         }
     }
 
-    public boolean updated()
-    {
-        return (irqDevice.updated() && timeSource.updated() && ioportRegistered);
+    @Override
+    public boolean updated() {
+        return irqDevice.updated() && timeSource.updated() && ioportRegistered;
     }
 
-    public void updateComponent(HardwareComponent component)
-    {
-        if ((component instanceof IOPortHandler) && component.updated()) {
-            ((IOPortHandler) component).registerIOPortCapable(this);
+    @Override
+    public void updateComponent(HardwareComponent component) {
+        if (component instanceof IOPortHandler && component.updated()) {
+            ((IOPortHandler)component).registerIOPortCapable(this);
             ioportRegistered = true;
         }
     }
 
-    public void acceptComponent(HardwareComponent component)
-    {
-        if ((component instanceof InterruptController) && component.initialised())
-            irqDevice = (InterruptController) component;
-        if ((component instanceof Clock) && component.initialised())
-            timeSource = (Clock) component;
-        if ((component instanceof IOPortHandler) && component.initialised()) {
-            ((IOPortHandler) component).registerIOPortCapable(this);
+    @Override
+    public void acceptComponent(HardwareComponent component) {
+        if (component instanceof InterruptController && component.initialised())
+            irqDevice = (InterruptController)component;
+        if (component instanceof Clock && component.initialised())
+            timeSource = (Clock)component;
+        if (component instanceof IOPortHandler && component.initialised()) {
+            ((IOPortHandler)component).registerIOPortCapable(this);
             ioportRegistered = true;
         }
-        if ((component instanceof DriveSet) && component.initialised()) {
-            this.cmosInitHD((DriveSet) component);
+        if (component instanceof DriveSet && component.initialised()) {
+            this.cmosInitHD((DriveSet)component);
             drivesInited = true;
         }
-        if ((component instanceof FloppyController) && component.initialised()) {
-            this.cmosInitFloppy((FloppyController) component);
+        if (component instanceof FloppyController && component.initialised()) {
+            this.cmosInitFloppy((FloppyController)component);
             floppiesInited = true;
         }
         if (component instanceof DriveSet)
-            bootType = ((DriveSet) component).getBootType();
+            bootType = ((DriveSet)component).getBootType();
 
         if (this.initialised()) {
             init();
@@ -688,22 +671,19 @@ public class RTC extends AbstractHardwareComponent implements IODevice
             secondTimer = timeSource.newTimer(secondCallback);
             delayedSecondTimer = timeSource.newTimer(delayedSecondCallback);
 
-            nextSecondTime = timeSource.getEmulatedNanos() /*+ 1000000000L;/*/ + (99 * timeSource.getTickRate()) / 100;
+            nextSecondTime = timeSource.getEmulatedNanos() + 99 * timeSource.getTickRate() / 100;
             delayedSecondTimer.setExpiry(nextSecondTime);
         }
     }
 
-    public byte[] getCMOS()
-    {
+    public byte[] getCMOS() {
         byte[] res = new byte[128];
         System.arraycopy(cmosData, 0, res, 0, 128);
         return res;
     }
 
-    public String toString()
-    {
+    @Override
+    public String toString() {
         return "MC146818 RealTime Clock";
     }
 }
-
-

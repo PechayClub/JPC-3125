@@ -18,8 +18,8 @@
     You should have received a copy of the GNU General Public License along
     with this program; if not, write to the Free Software Foundation, Inc.,
     51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
- 
-    Details (including contact information) can be found at: 
+
+    Details (including contact information) can be found at:
 
     jpc.sourceforge.net
     or the developer website
@@ -33,14 +33,12 @@
 
 package org.jpc.emulator.execution.codeblock;
 
-import java.util.logging.*;
+import java.util.logging.Logger;
 
 import org.jpc.emulator.execution.Executable;
-import org.jpc.emulator.execution.decoder.BasicBlock;
-import org.jpc.emulator.processor.*;
+import org.jpc.emulator.processor.Processor;
 
 /**
- * 
  * @author Rhys Newman
  * @author Chris Dennis
  * @author Ian Preston
@@ -50,8 +48,8 @@ class BackgroundCompiler implements CodeBlockCompiler {
     private static final Logger LOGGING = Logger.getLogger(BackgroundCompiler.class.getName());
     private static final int COMPILER_QUEUE_SIZE = 256;
     private static final int COMPILE_REQUEST_THRESHOLD = 1024;
-//    private static final int MAX_COMPILER_THREADS = 10;
-    private CodeBlockCompiler immediate,  delayed;
+
+    private CodeBlockCompiler immediate, delayed;
     private CompilerQueue compilerQueue;
 
     public BackgroundCompiler(CodeBlockCompiler immediate, CodeBlockCompiler delayed) {
@@ -60,28 +58,12 @@ class BackgroundCompiler implements CodeBlockCompiler {
         compilerQueue = new CompilerQueue(COMPILER_QUEUE_SIZE);
 
         int compilerCount = 1;
-//        int compilerCount = Runtime.getRuntime().availableProcessors() - 1;
-//        if (compilerCount < 1)
-//            compilerCount = 1;
-//        else if (compilerCount > MAX_COMPILER_THREADS)
-//            compilerCount = MAX_COMPILER_THREADS;
-//        
-//        while (compilerCount-- > 0) {
-//        Thread t = new Thread(new Compiler(), "Background CodeBlock Compiler Thread " + compilerCount);
-//        try {
-//            t.setPriority(Math.max(Thread.MIN_PRIORITY, Thread.currentThread().getPriority() - 3));
-//        } catch (SecurityException e) {
-//            LOGGING.log(Level.INFO, "security manager prevents setting thread priorities");
-//        }
-//        t.setDaemon(true);
-//        t.start();
-//        }        
     }
 
     private class Compiler implements Runnable {
 
-        public void run() 
-        {
+        @Override
+        public void run() {
             while (true) {
                 ExecuteCountingCodeBlockWrapper target = compilerQueue.getBlock();
                 if (target == null) {
@@ -101,9 +83,9 @@ class BackgroundCompiler implements CodeBlockCompiler {
                 if (src instanceof ReplacementBlockTrigger) {
                     continue;
                 } else if (src instanceof RealModeCodeBlock) {
-                    result = delayed.getRealModeCodeBlock((BasicBlock) src);
+                    result = delayed.getRealModeCodeBlock(src);
                 } else if (src instanceof ProtectedModeCodeBlock) {
-                    result = delayed.getProtectedModeCodeBlock((BasicBlock) src);
+                    result = delayed.getProtectedModeCodeBlock(src);
                 }
 
                 if (result == null) {
@@ -115,16 +97,19 @@ class BackgroundCompiler implements CodeBlockCompiler {
         }
     }
 
+    @Override
     public RealModeCodeBlock getRealModeCodeBlock(CodeBlock block) {
         RealModeCodeBlock imm = immediate.getRealModeCodeBlock(block);
         return new RealModeCodeBlockWrapper(imm);
     }
 
+    @Override
     public ProtectedModeCodeBlock getProtectedModeCodeBlock(CodeBlock block) {
         ProtectedModeCodeBlock imm = immediate.getProtectedModeCodeBlock(block);
         return new ProtectedModeCodeBlockWrapper(imm);
     }
 
+    @Override
     public Virtual8086ModeCodeBlock getVirtual8086ModeCodeBlock(CodeBlock block) {
         Virtual8086ModeCodeBlock imm = immediate.getVirtual8086ModeCodeBlock(block);
         return new Virtual8086ModeCodeBlockWrapper(imm);
@@ -139,9 +124,10 @@ class BackgroundCompiler implements CodeBlockCompiler {
             super(block);
         }
 
+        @Override
         public Executable.Branch execute(Processor cpu) {
             executeCount++;
-            if ((executeCount % COMPILE_REQUEST_THRESHOLD) == 0) {
+            if (executeCount % COMPILE_REQUEST_THRESHOLD == 0) {
                 if (!queued)
                     queued = compilerQueue.addBlock(this);
             }
@@ -195,14 +181,11 @@ class BackgroundCompiler implements CodeBlockCompiler {
             return false;
         }
 
-        ExecuteCountingCodeBlockWrapper getBlock() 
-        {
+        ExecuteCountingCodeBlockWrapper getBlock() {
             int index = 0;
             int maxCount = 0;
-            for (int i = 0; i < queue.length; i++) 
-            {
-                if ((queue[i] != null) && (queue[i].executeCount > maxCount)) 
-                {
+            for (int i = 0; i < queue.length; i++) {
+                if (queue[i] != null && queue[i].executeCount > maxCount) {
                     maxCount = queue[i].executeCount;
                     index = i;
                 }
@@ -211,8 +194,7 @@ class BackgroundCompiler implements CodeBlockCompiler {
             queue[index] = null;
 
             maxCount /= 2;
-            for (int i = 0; i < queue.length; i++)
-            {
+            for (int i = 0; i < queue.length; i++) {
                 if (queue[i] == null)
                     continue;
                 if (queue[i].executeCount < maxCount)

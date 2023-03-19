@@ -18,8 +18,8 @@
     You should have received a copy of the GNU General Public License along
     with this program; if not, write to the Free Software Foundation, Inc.,
     51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
- 
-    Details (including contact information) can be found at: 
+
+    Details (including contact information) can be found at:
 
     jpc.sourceforge.net
     or the developer website
@@ -33,16 +33,16 @@
 
 package org.jpc.emulator.processor;
 
-import java.io.*;
+import java.io.DataInput;
+import java.io.DataOutput;
+import java.io.IOException;
 
 import org.jpc.emulator.memory.AddressSpace;
 
 /**
- * 
  * @author Chris Dennis
  */
-final class RealModeSegment extends Segment
-{
+final class RealModeSegment extends Segment {
     private int selector;
     private int base;
     private int type;
@@ -52,8 +52,7 @@ final class RealModeSegment extends Segment
     private boolean segment = true;
     private boolean present = true;
 
-    public RealModeSegment(AddressSpace memory, int selector)
-    {
+    public RealModeSegment(AddressSpace memory, int selector) {
         super(memory);
         this.selector = selector;
         base = selector << 4;
@@ -62,8 +61,7 @@ final class RealModeSegment extends Segment
         type = ProtectedModeSegment.TYPE_DATA_WRITABLE | ProtectedModeSegment.TYPE_ACCESSED;
     }
 
-    public RealModeSegment(AddressSpace memory, Segment ancestor)
-    {
+    public RealModeSegment(AddressSpace memory, Segment ancestor) {
         super(memory);
         selector = ancestor.getSelector();
         base = ancestor.getBase();
@@ -75,8 +73,8 @@ final class RealModeSegment extends Segment
         rpl = ancestor.getRPL();
     }
 
-    public void saveState(DataOutput output) throws IOException
-    {
+    @Override
+    public void saveState(DataOutput output) throws IOException {
         output.writeInt(0);
         output.writeInt(selector);
         output.writeInt(type);
@@ -87,8 +85,8 @@ final class RealModeSegment extends Segment
         output.writeBoolean(present);
     }
 
-    public void loadState(DataInput input) throws IOException
-    {
+    @Override
+    public void loadState(DataInput input) throws IOException {
         type = input.readInt();
         rpl = input.readInt();
         limit = input.readLong();
@@ -97,87 +95,86 @@ final class RealModeSegment extends Segment
         present = input.readBoolean();
     }
 
-    public boolean getDefaultSizeFlag()
-    {
+    @Override
+    public boolean getDefaultSizeFlag() {
         return defaultSize;
     }
 
-    public int getLimit()
-    {
+    @Override
+    public int getLimit() {
         return (int)limit;
     }
 
-    public int getBase()
-    {
+    @Override
+    public int getBase() {
         return base;
     }
 
-    public int getSelector()
-    {
+    @Override
+    public int getSelector() {
         return selector;
     }
 
-    public boolean setSelector(int selector)
-    {
+    @Override
+    public boolean setSelector(int selector) {
         this.selector = selector;
         base = selector << 4;
         type = ProtectedModeSegment.TYPE_DATA_WRITABLE | ProtectedModeSegment.TYPE_ACCESSED;
         return true;
     }
 
-    public void checkAddress(int offset)
-    {
-        if ((0xffffffffL & offset) > limit)
-        {
+    @Override
+    public void checkAddress(int offset) {
+        if ((0xffffffffL & offset) > limit) {
             System.out.println("RM Segment Limit exceeded: offset=" + Integer.toHexString(offset) + ", limit=" + Long.toHexString(limit));
-            throw new ProcessorException(ProcessorException.Type.GENERAL_PROTECTION, 0, true);//ProcessorException.GENERAL_PROTECTION_0;
+            throw new ProcessorException(ProcessorException.Type.GENERAL_PROTECTION, 0, true);
         }
     }
 
-    public int translateAddressRead(int offset)
-    {
+    @Override
+    public int translateAddressRead(int offset) {
         checkAddress(offset);
         return base + offset;
     }
 
-    public int translateAddressWrite(int offset)
-    {
+    @Override
+    public int translateAddressWrite(int offset) {
         checkAddress(offset);
         return base + offset;
     }
 
-    public int getRPL()
-    {
+    @Override
+    public int getRPL() {
         return rpl;
     }
 
-    public int getType()
-    {
+    @Override
+    public int getType() {
         return type;
     }
 
-    public boolean isPresent()
-    {
+    @Override
+    public boolean isPresent() {
         return present;
     }
 
-    public boolean isSystem()
-    {
+    @Override
+    public boolean isSystem() {
         return !segment;
     }
 
-    public int getDPL()
-    {
+    @Override
+    public int getDPL() {
         throw new IllegalStateException(getClass().toString());
     }
 
-    public void setRPL(int cpl)
-    {
+    @Override
+    public void setRPL(int cpl) {
         throw new IllegalStateException(getClass().toString());
     }
 
-    public void printState()
-    {
+    @Override
+    public void printState() {
         System.out.println("RM Segment");
         System.out.println("selector: " + Integer.toHexString(selector));
         System.out.println("base: " + Integer.toHexString(base));

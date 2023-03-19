@@ -1,5 +1,8 @@
 /*
     JPC: An x86 PC Hardware Emulator for a pure Java Virtual Machine
+    Release Version 3.0
+
+    A project by Ian Preston, ianopolous AT gmail.com
 
     Copyright (C) 2012-2013 Ian Preston
 
@@ -15,8 +18,8 @@
     You should have received a copy of the GNU General Public License along
     with this program; if not, write to the Free Software Foundation, Inc.,
     51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
- 
-    Details (including contact information) can be found at: 
+
+    Details (including current contact information) can be found at:
 
     jpc.sourceforge.net
     or the developer website
@@ -27,35 +30,32 @@
 
 package org.jpc.emulator.execution.opcodes.rm;
 
-import org.jpc.emulator.execution.*;
-import org.jpc.emulator.execution.decoder.*;
-import org.jpc.emulator.processor.*;
-import org.jpc.emulator.processor.fpu64.*;
-import static org.jpc.emulator.processor.Processor.*;
+import org.jpc.emulator.execution.Executable;
+import org.jpc.emulator.execution.decoder.Modrm;
+import org.jpc.emulator.execution.decoder.PeekableInputStream;
+import org.jpc.emulator.processor.Processor;
 
-public class out_Ib_AL extends Executable
-{
+public class out_Ib_AL extends Executable {
     final int immb;
 
-    public out_Ib_AL(int blockStart, int eip, int prefices, PeekableInputStream input)
-    {
+    public out_Ib_AL(int blockStart, int eip, int prefices, PeekableInputStream input) {
         super(blockStart, eip);
         immb = Modrm.Ib(input);
     }
 
-    public Branch execute(Processor cpu)
-    {
-        cpu.ioports.ioPortWrite8(0xFF&immb, 0xFF&cpu.r_al.get8());
+    @Override
+    public Branch execute(Processor cpu) {
+        cpu.ioports.ioPortWrite8(0xFF & immb, 0xFF & cpu.r_al.get8());
         return Branch.None;
     }
 
-    public boolean isBranch()
-    {
+    @Override
+    public boolean isBranch() {
         return false;
     }
 
-    public String toString()
-    {
-        return this.getClass().getName();
+    @Override
+    public String toString() {
+        return "out" + " " + Integer.toHexString(immb) + ", " + "AL";
     }
 }

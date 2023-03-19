@@ -1,41 +1,42 @@
 package org.jpc.emulator.execution.opcodes.pm;
 
-import org.jpc.emulator.execution.*;
-import org.jpc.emulator.execution.decoder.*;
-import org.jpc.emulator.processor.*;
-import org.jpc.emulator.processor.fpu64.*;
-import static org.jpc.emulator.processor.Processor.*;
+import org.jpc.emulator.execution.Executable;
+import org.jpc.emulator.execution.decoder.Disassembler;
+import org.jpc.emulator.execution.decoder.Instruction;
+import org.jpc.emulator.execution.decoder.PeekableInputStream;
+import org.jpc.emulator.execution.decoder.Prefices;
+import org.jpc.emulator.processor.Processor;
+import org.jpc.emulator.processor.ProcessorException;
 
-public class InvalidOpcode extends Executable
-{
+public class InvalidOpcode extends Executable {
     final int blockLength;
     final int instructionLength;
     String error;
 
-    public InvalidOpcode(int blockStart, int eip, int prefices, PeekableInputStream input)
-    {
+    public InvalidOpcode(int blockStart, int eip, int prefices, PeekableInputStream input) {
         super(blockStart, eip);
-        instructionLength = (int)input.getAddress()-eip;
-        blockLength = (int)input.getAddress()-blockStart;
+        instructionLength = (int)input.getAddress() - eip;
+        blockLength = (int)input.getAddress() - blockStart;
         input.seek(-instructionLength);
         Instruction in = Disassembler.disassemble(input, Prefices.isAddr16(prefices) ? 32 : 16);
         error = in.toString() + ", x86 byte = " + Disassembler.getRawBytes(input, 0);
     }
 
-    public Branch execute(Processor cpu)
-    {
-        System.out.println("Invalid opcode executed: "+error);
-        if (true) throw ProcessorException.UNDEFINED;
+    @Override
+    public Branch execute(Processor cpu) {
+        System.out.println("Invalid opcode executed: " + error);
+        if (true)
+            throw ProcessorException.UNDEFINED;
         return Branch.Jmp_Unknown;
     }
 
-    public boolean isBranch()
-    {
+    @Override
+    public boolean isBranch() {
         return true;
     }
 
-    public String toString()
-    {
+    @Override
+    public String toString() {
         return this.getClass().getName();
     }
 }

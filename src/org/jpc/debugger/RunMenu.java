@@ -18,8 +18,8 @@
     You should have received a copy of the GNU General Public License along
     with this program; if not, write to the Free Software Foundation, Inc.,
     51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
- 
-    Details (including contact information) can be found at: 
+
+    Details (including contact information) can be found at:
 
     jpc.sourceforge.net
     or the developer website
@@ -33,22 +33,29 @@
 
 package org.jpc.debugger;
 
-import java.awt.*;
-import java.awt.event.*;
+import java.awt.KeyEventDispatcher;
+import java.awt.KeyboardFocusManager;
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
+import java.awt.event.KeyEvent;
 
-import java.io.DataInputStream;
-import javax.swing.*;
+import javax.swing.JCheckBoxMenuItem;
+import javax.swing.JMenu;
+import javax.swing.JMenuItem;
+import javax.swing.JOptionPane;
+import javax.swing.KeyStroke;
+import javax.swing.SwingUtilities;
 
 import org.jpc.emulator.PC;
+import org.jpc.emulator.execution.codeblock.CodeBlock;
 import org.jpc.emulator.processor.Processor;
 import org.jpc.support.Clock;
-import org.jpc.emulator.execution.codeblock.CodeBlock;
 
 public class RunMenu extends JMenu implements ActionListener {
 
     private Runner runner;
     private JCheckBoxMenuItem background, timetravel, pauseTimer;
-    private JMenuItem run,  step,  reset, multiStep;
+    private JMenuItem run, step, reset, multiStep;
     private FunctionKeys functionKeys;
     private Processor processor;
     private CodeBlockRecord codeBlockRecord;
@@ -96,18 +103,17 @@ public class RunMenu extends JMenu implements ActionListener {
         KeyboardFocusManager.getCurrentKeyboardFocusManager().addKeyEventDispatcher(functionKeys);
     }
 
-    public boolean isTimeTravel()
-    {
+    public boolean isTimeTravel() {
         return timetravel.getState();
     }
 
     public void refresh() {
-        processor = (Processor) JPC.getObject(Processor.class);
-        codeBlockRecord = (CodeBlockRecord) JPC.getObject(CodeBlockRecord.class);
+        processor = (Processor)JPC.getObject(Processor.class);
+        codeBlockRecord = (CodeBlockRecord)JPC.getObject(CodeBlockRecord.class);
 
-        PC pc = (PC) JPC.getObject(PC.class);
+        PC pc = (PC)JPC.getObject(PC.class);
         if (pc != null) {
-            clock = (Clock) pc.getComponent(Clock.class);
+            clock = (Clock)pc.getComponent(Clock.class);
         }
         if (codeBlockRecord != null) {
             codeBlockRecord.advanceDecode();
@@ -121,6 +127,7 @@ public class RunMenu extends JMenu implements ActionListener {
 
     class FunctionKeys implements KeyEventDispatcher {
 
+        @Override
         public boolean dispatchKeyEvent(KeyEvent e) {
             if (e.getID() == KeyEvent.KEY_PRESSED) {
                 if (e.getKeyCode() == KeyEvent.VK_F8) {
@@ -176,6 +183,7 @@ public class RunMenu extends JMenu implements ActionListener {
 
         class U1 implements Runnable {
 
+            @Override
             public void run() {
                 JPC.getInstance().refresh();
             }
@@ -199,24 +207,26 @@ public class RunMenu extends JMenu implements ActionListener {
                 }
             }
 
+            @Override
             public void run() {
                 JOptionPane.showMessageDialog(JPC.getInstance(), message, title, type);
             }
         }
 
+        @Override
         public void run() {
 
             if (codeBlockRecord == null) {
                 return;
             }
-            PC pc = (PC) JPC.getObject(PC.class);
+            PC pc = (PC)JPC.getObject(PC.class);
             pc.start();
 
             try {
                 int delay = 2000;
                 boolean bg;
-                BreakpointsFrame bps = (BreakpointsFrame) JPC.getObject(BreakpointsFrame.class);
-                WatchpointsFrame wps = (WatchpointsFrame) JPC.getObject(WatchpointsFrame.class);
+                BreakpointsFrame bps = (BreakpointsFrame)JPC.getObject(BreakpointsFrame.class);
+                WatchpointsFrame wps = (WatchpointsFrame)JPC.getObject(WatchpointsFrame.class);
                 U1 u = new U1();
                 long t1 = System.currentTimeMillis();
 
@@ -234,7 +244,8 @@ public class RunMenu extends JMenu implements ActionListener {
                             clock.resume();
                         }
                         if (codeBlockRecord.executeBlock() == null) {
-                            throw new Exception("Unimplemented Opcode. IP = " + Integer.toHexString(processor.getInstructionPointer()).toUpperCase());
+                            throw new Exception(
+                                "Unimplemented Opcode. IP = " + Integer.toHexString(processor.getInstructionPointer()).toUpperCase());
                         }
                         CodeBlock nextBlock = codeBlockRecord.advanceDecode();
 
@@ -245,12 +256,13 @@ public class RunMenu extends JMenu implements ActionListener {
                                 int old = wp.getValue();
                                 wp.updateValue();
                                 int newVal = wp.getValue();
-                                if (newVal != old)
-                                {
-                                    if (!wp.isWatchingForValue() || (wp.getWatchTarget() == (byte)newVal))
-                                    {
+                                if (newVal != old) {
+                                    if (!wp.isWatchingForValue() || wp.getWatchTarget() == (byte)newVal) {
                                         java.awt.Toolkit.getDefaultToolkit().beep();
-                                        new Alerter("Watchpoint", String.format("Watch at %08x: old value=%02x new value=%02x " + wp.getName(), wp.getAddress(), old, newVal), JOptionPane.INFORMATION_MESSAGE).show();
+                                        new Alerter("Watchpoint",
+                                            String.format("Watch at %08x: old value=%02x new value=%02x " + wp.getName(), wp.getAddress(),
+                                                old, newVal),
+                                            JOptionPane.INFORMATION_MESSAGE).show();
                                         break;
                                     }
                                 }
@@ -283,7 +295,7 @@ public class RunMenu extends JMenu implements ActionListener {
                     }
 
                     if (bg) {
-                        if ((c % 1000) != 0) {
+                        if (c % 1000 != 0) {
                             continue;
                         }
                         long t2 = System.currentTimeMillis();
@@ -319,16 +331,16 @@ public class RunMenu extends JMenu implements ActionListener {
             return 0;
         }
         if (cpu == null) {
-            cpu = (Processor) JPC.getObject(Processor.class);
+            cpu = (Processor)JPC.getObject(Processor.class);
         }
-        PC pc = (PC) JPC.getObject(PC.class);
+        PC pc = (PC)JPC.getObject(PC.class);
         pc.start();
 
         JPC.getInstance().notifyExecutionStarted();
 
         int instructions = 0;
         try {
-            BreakpointsFrame bps = (BreakpointsFrame) JPC.getObject(BreakpointsFrame.class);
+            BreakpointsFrame bps = (BreakpointsFrame)JPC.getObject(BreakpointsFrame.class);
             if (pauseTimer.isSelected()) {
                 clock.pause();
             } else {
@@ -354,12 +366,13 @@ public class RunMenu extends JMenu implements ActionListener {
                         String addr = MemoryViewPanel.zeroPadHex(bp.getAddress(), 8);
                         String name = bp.getName();
                         java.awt.Toolkit.getDefaultToolkit().beep();
-                        JOptionPane.showMessageDialog(JPC.getInstance(), "Break at " + addr + ": " + name, "Breakpoint", JOptionPane.INFORMATION_MESSAGE);
+                        JOptionPane.showMessageDialog(JPC.getInstance(), "Break at " + addr + ": " + name, "Breakpoint",
+                            JOptionPane.INFORMATION_MESSAGE);
                         break;
                     }
                 }
 
-                if ((count % 1000) == 999) {
+                if (count % 1000 == 999) {
                     JPC.getInstance().refresh();
                 }
             }
@@ -399,13 +412,14 @@ public class RunMenu extends JMenu implements ActionListener {
         JPC.getInstance().refresh();
     }
 
+    @Override
     public void actionPerformed(ActionEvent evt) {
         Object src = evt.getSource();
 
         if (src == reset) {
             stop();
             try {
-                PC pc = (PC) JPC.getObject(PC.class);
+                PC pc = (PC)JPC.getObject(PC.class);
                 if (pc != null) {
                     pc.reset();
                 }
@@ -418,15 +432,15 @@ public class RunMenu extends JMenu implements ActionListener {
             executeStep();
         } else if (src == multiStep) {
             try {
-                String val = JOptionPane.showInputDialog(JPC.getInstance(), "Enter the new number of steps to take each time", "" + multiSteps);
+                String val = JOptionPane.showInputDialog(JPC.getInstance(), "Enter the new number of steps to take each time",
+                    "" + multiSteps);
                 multiSteps = Math.max(1, Integer.parseInt(val.trim()));
                 multiStep.setText("Multiple Steps (" + multiSteps + ")");
             } catch (Exception e) {
             }
         } else if (src == run) {
             toggleRun();
-        } else if (src == timetravel)
-        {
+        } else if (src == timetravel) {
             ProcessorAccess pa = ProcessorAccess.create(timetravel.getState(), processor);
             JPC.getInstance().objects().removeObject(ProcessorAccess.class);
             JPC.getInstance().objects().addObject(ProcessorAccess.class, pa);

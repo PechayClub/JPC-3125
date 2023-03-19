@@ -1,5 +1,8 @@
 /*
     JPC: An x86 PC Hardware Emulator for a pure Java Virtual Machine
+    Release Version 3.0
+
+    A project by Ian Preston, ianopolous AT gmail.com
 
     Copyright (C) 2012-2013 Ian Preston
 
@@ -15,8 +18,8 @@
     You should have received a copy of the GNU General Public License along
     with this program; if not, write to the Free Software Foundation, Inc.,
     51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
- 
-    Details (including contact information) can be found at: 
+
+    Details (including current contact information) can be found at:
 
     jpc.sourceforge.net
     or the developer website
@@ -27,32 +30,31 @@
 
 package org.jpc.emulator.execution.opcodes.pm;
 
-import org.jpc.emulator.execution.*;
-import org.jpc.emulator.execution.decoder.*;
-import org.jpc.emulator.processor.*;
-import org.jpc.emulator.processor.fpu64.*;
-import static org.jpc.emulator.processor.Processor.*;
+import org.jpc.emulator.execution.Executable;
+import org.jpc.emulator.execution.decoder.PeekableInputStream;
+import org.jpc.emulator.processor.Processor;
 
-public class fcomp_ST0_ST3 extends Executable
-{
+public class fcomp_ST0_ST3 extends Executable {
 
-    public fcomp_ST0_ST3(int blockStart, int eip, int prefices, PeekableInputStream input)
-    {
+    public fcomp_ST0_ST3(int blockStart, int eip, int prefices, PeekableInputStream input) {
         super(blockStart, eip);
         int modrm = input.readU8();
     }
 
-    public Branch execute(Processor cpu)
-    {
-                            int newcode = 0xd;
+    @Override
+    public Branch execute(Processor cpu) {
+        int newcode = 0xd;
         double freg0 = cpu.fpu.ST(0);
         double freg1 = cpu.fpu.ST(3);
         if (Double.isNaN(freg0) || Double.isNaN(freg1))
             cpu.fpu.setInvalidOperation();
         else {
-            if (freg0 > freg1) newcode = 0;
-            else if (freg0 < freg1) newcode = 1;
-            else newcode = 8;
+            if (freg0 > freg1)
+                newcode = 0;
+            else if (freg0 < freg1)
+                newcode = 1;
+            else
+                newcode = 8;
         }
         cpu.fpu.conditionCode &= 2;
         cpu.fpu.conditionCode |= newcode;
@@ -60,13 +62,13 @@ public class fcomp_ST0_ST3 extends Executable
         return Branch.None;
     }
 
-    public boolean isBranch()
-    {
+    @Override
+    public boolean isBranch() {
         return false;
     }
 
-    public String toString()
-    {
-        return this.getClass().getName();
+    @Override
+    public String toString() {
+        return "fcomp" + " " + "ST0" + ", " + "ST3";
     }
 }

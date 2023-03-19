@@ -18,8 +18,8 @@
     You should have received a copy of the GNU General Public License along
     with this program; if not, write to the Free Software Foundation, Inc.,
     51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
- 
-    Details (including contact information) can be found at: 
+
+    Details (including contact information) can be found at:
 
     jpc.sourceforge.net
     or the developer website
@@ -34,8 +34,8 @@
 /**
  * Memory sub-system specific classes and interfaces.
  * <p>
- * This includes three different kinds of memory blocks, and various different
- * address space classes.
+ * This includes three different kinds of memory blocks, and various different address space
+ * classes.
  * @author Chris Dennis
  * @author Rhys Newman
  */

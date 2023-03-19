@@ -18,8 +18,8 @@
     You should have received a copy of the GNU General Public License along
     with this program; if not, write to the Free Software Foundation, Inc.,
     51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
- 
-    Details (including contact information) can be found at: 
+
+    Details (including contact information) can be found at:
 
     jpc.sourceforge.net
     or the developer website
@@ -40,36 +40,31 @@ import org.jpc.emulator.execution.decoder.PeekableInputStream;
  * Converts a stream of x86 bytes into a basic block
  * @author Ian Preston
  */
-public interface Decoder
-{
+public interface Decoder {
     /**
      * Decodes a sequence of real-mode x86 bytes into an instruction stream.
-     *
      * @param source sequence of x86 bytes to decode.
      * @param limit max x86 instructions to decode.
      * @return decoded instruction stream
      */
-    public BasicBlock decodeReal(PeekableInputStream source, int limit);
+    BasicBlock decodeReal(PeekableInputStream source, int limit);
 
     /**
      * Decodes a sequence of protected-mode x86 bytes into an instruction stream.
      * <p>
-     * If the default operand size is 32-bit then the operandSize flag should be
-     * set.
-     *
+     * If the default operand size is 32-bit then the operandSize flag should be set.
      * @param source sequence of x86 bytes to decode
      * @param operandSize <code>true</code> true if the default operand size is 32-bit
      * @param limit max x86 instructions to decode.
      * @return decoded instruction stream
      */
-    public BasicBlock decodeProtected(PeekableInputStream source, boolean operandSize, int limit);
+    BasicBlock decodeProtected(PeekableInputStream source, boolean operandSize, int limit);
 
     /**
      * Decodes a sequence of virtual8086-mode x86 bytes into an instruction stream.
-     *
      * @param source sequence of x86 bytes to decode.
      * @param limit max x86 instructions to decode.
      * @return decoded instruction stream
      */
-    public BasicBlock decodeVirtual8086(PeekableInputStream source, int limit);
+    BasicBlock decodeVirtual8086(PeekableInputStream source, int limit);
 }

@@ -18,8 +18,8 @@
     You should have received a copy of the GNU General Public License along
     with this program; if not, write to the Free Software Foundation, Inc.,
     51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
- 
-    Details (including contact information) can be found at: 
+
+    Details (including contact information) can be found at:
 
     jpc.sourceforge.net
     or the developer website
@@ -40,51 +40,47 @@ import java.net.ServerSocket;
 import java.net.Socket;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.ListIterator;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
-/** Forwards packets between pairs of connections
- *
+/**
+ * Forwards packets between pairs of connections
  * @author Ian Preston
  */
-public class EthernetHubServer  implements Runnable {
+public class EthernetHubServer implements Runnable {
 
     private List<Client> clients = new ArrayList<Client>();
     private ServerSocket sock;
 
     public EthernetHubServer(int port) {
-        try
-        {
+        try {
             sock = new ServerSocket(port);
-        } catch (IOException ex)
-        {
+        } catch (IOException ex) {
             Logger.getLogger(EthernetHubServer.class.getName()).log(Level.SEVERE, null, ex);
         }
         new Thread(this).start();
         System.out.println("Started EthernetHub Server on port " + port);
     }
 
+    @Override
     public void run() {
         //wait for connections
         Socket client;
         int count = 1;
         while (true) {
-            try
-            {
+            try {
                 client = sock.accept();
                 synchronized (clients) {
                     Client c = new Client(client, count++);
                     if (clients.size() % 2 == 1) {
-                        clients.get(clients.size()-1).setPartner(c);
-                        c.setPartner(clients.get(clients.size()-1));
+                        clients.get(clients.size() - 1).setPartner(c);
+                        c.setPartner(clients.get(clients.size() - 1));
                     }
                     clients.add(c);
                     new Thread(new Forwarder(c)).start();
                 }
-                System.out.println("Accepted Connection from client " + (count -1));
-            } catch (IOException ex)
-            {
+                System.out.println("Accepted Connection from client " + (count - 1));
+            } catch (IOException ex) {
                 Logger.getLogger(EthernetHubServer.class.getName()).log(Level.SEVERE, null, ex);
             }
         }
@@ -101,52 +97,39 @@ public class EthernetHubServer  implements Runnable {
             in = us.getIn();
         }
 
-        public void run()
-        {
+        @Override
+        public void run() {
             while (them == null)
                 if (us.getPartner() != null)
                     them = us.getPartner();
                 else
-                    try
-                    {
+                    try {
                         Thread.sleep(1000);
-                    }
-                    catch (InterruptedException ex)
-                    {
+                    } catch (InterruptedException ex) {
                         Logger.getLogger(EthernetHubServer.class.getName()).log(Level.SEVERE, null, ex);
                     }
             out = them.getOut();
-            try
-            {
-                while (true)
-                {
+            try {
+                while (true) {
                     long start = System.currentTimeMillis();
                     long total = 0;
-                    for (int i = 0; i < 1000; i++)
-                    {
+                    for (int i = 0; i < 1000; i++) {
                         int size = in.readInt();
                         total += size;
                         byte[] packet = new byte[size];
                         in.readFully(packet);
-//                    System.out.println("Received a packet from client " + us.id);
-                        try
-                        {
+                        try {
                             out.writeInt(packet.length);
                             out.write(packet);
                             out.flush();
-//                      System.out.println("Forwarded a packet to client " + next.id);
-                        }
-                        catch (IOException e)
-                        {
+                        } catch (IOException e) {
                             System.out.println("Client " + us.id + " couldn't contact partner.");
                         }
                     }
                     long end = System.currentTimeMillis();
-                    System.out.println("Bandwith " + (total*1000/(end-start)) + " bytes/second");
+                    System.out.println("Bandwith " + total * 1000 / (end - start) + " bytes/second");
                 }
-            }
-            catch (IOException e)
-            {
+            } catch (IOException e) {
                 Logger.getLogger(EthernetHubServer.class.getName()).log(Level.SEVERE, null, e);
             }
         }
@@ -165,14 +148,12 @@ public class EthernetHubServer  implements Runnable {
 
         Client(Socket sock, int id) {
             this.id = id;
-            try
-            {
+            try {
                 sock.setTcpNoDelay(true);
                 sock.setPerformancePreferences(0, 2, 1);
                 out = new DataOutputStream(sock.getOutputStream());
                 in = new DataInputStream(sock.getInputStream());
-            } catch (IOException ex)
-            {
+            } catch (IOException ex) {
                 Logger.getLogger(EthernetHubServer.class.getName()).log(Level.SEVERE, null, ex);
             }
         }

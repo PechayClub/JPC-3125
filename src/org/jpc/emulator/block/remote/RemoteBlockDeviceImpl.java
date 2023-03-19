@@ -18,8 +18,8 @@
     You should have received a copy of the GNU General Public License along
     with this program; if not, write to the Free Software Foundation, Inc.,
     51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
- 
-    Details (including contact information) can be found at: 
+
+    Details (including contact information) can be found at:
 
     jpc.sourceforge.net
     or the developer website
@@ -31,62 +31,61 @@
     End of licence header
 */
 
-package org.jpc.support;
+package org.jpc.emulator.block.remote;
 
-import java.io.*;
-import java.util.logging.*;
+import java.io.DataInputStream;
+import java.io.DataOutputStream;
+import java.io.InputStream;
+import java.io.OutputStream;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
-import static org.jpc.support.RemoteBlockDevice.Protocol;
+import org.jpc.emulator.block.BlockDevice;
+import org.jpc.emulator.block.remote.RemoteBlockDevice.Protocol;
 
 /**
- * 
  * @author Ian Preston
  */
-public class RemoteBlockDeviceImpl implements Runnable
-{
+public class RemoteBlockDeviceImpl implements Runnable {
     private static final Logger LOGGING = Logger.getLogger(RemoteBlockDeviceImpl.class.getName());
     private DataInputStream in;
     private DataOutputStream out;
     private BlockDevice target;
 
     private byte[] buffer;
-    
-    public RemoteBlockDeviceImpl(InputStream in, OutputStream out, BlockDevice target)
-    {
+
+    public RemoteBlockDeviceImpl(InputStream in, OutputStream out, BlockDevice target) {
         this.target = target;
         this.in = new DataInputStream(in);
-        this.out = new  DataOutputStream(out);
+        this.out = new DataOutputStream(out);
         buffer = new byte[1024];
 
         new Thread(this).start();
     }
 
-    public void run()
-    {
-        while (true)
-        {
-            try
-            {
+    @Override
+    public void run() {
+        while (true) {
+            try {
                 int methodType = in.read();
 
-                switch (Protocol.values()[methodType])
-                {
+                switch (Protocol.values()[methodType]) {
                 case READ:
                     long sectorNumber = in.readLong();
-                    int toRead = Math.min(in.readInt(), buffer.length/512);
+                    int toRead = Math.min(in.readInt(), buffer.length / 512);
                     int result = target.read(sectorNumber, buffer, toRead);
-                    
+
                     out.writeByte(0);
                     out.writeInt(result);
-                    out.writeInt(toRead*512);
-                    out.write(buffer, 0, toRead*512);
+                    out.writeInt(toRead * 512);
+                    out.write(buffer, 0, toRead * 512);
                     break;
                 case WRITE:
                     long writesectorNumber = in.readLong();
                     int toWrite = Math.min(in.readInt(), buffer.length);
                     in.read(buffer, 0, toWrite);
                     int writeresult = target.write(writesectorNumber, buffer, toWrite);
-                    
+
                     out.writeByte(0);
                     out.writeInt(writeresult);
                     break;
@@ -133,11 +132,9 @@ public class RemoteBlockDeviceImpl implements Runnable
                     LOGGING.log(Level.WARNING, "socket closed due to protocol error");
                     return;
                 }
-                
+
                 out.flush();
-            }
-            catch (Exception e) 
-            {
+            } catch (Exception e) {
                 e.printStackTrace();
 
                 System.exit(0);
@@ -145,5 +142,3 @@ public class RemoteBlockDeviceImpl implements Runnable
         }
     }
 }
-    
-    

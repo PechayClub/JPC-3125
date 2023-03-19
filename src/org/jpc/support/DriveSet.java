@@ -18,8 +18,8 @@
     You should have received a copy of the GNU General Public License along
     with this program; if not, write to the Free Software Foundation, Inc.,
     51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
- 
-    Details (including contact information) can be found at: 
+
+    Details (including contact information) can be found at:
 
     jpc.sourceforge.net
     or the developer website
@@ -33,79 +33,78 @@
 
 package org.jpc.support;
 
+import java.io.DataInput;
+import java.io.DataOutput;
 //Do not even think about adding an import line to this class - especially not import java.net.*!
 import java.io.IOException;
-import java.io.DataOutput;
-import java.io.DataInput;
-import java.util.logging.*;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 import org.jpc.emulator.AbstractHardwareComponent;
+import org.jpc.emulator.block.BlockDevice;
+import org.jpc.emulator.block.CDROMBlockDevice;
+import org.jpc.emulator.block.FloppyBlockDevice;
+import org.jpc.emulator.block.HDBlockDevice;
+import org.jpc.emulator.block.TreeBlockDevice;
+import org.jpc.emulator.block.backing.ArrayBackedSeekableIODevice;
+import org.jpc.emulator.block.backing.CachingSeekableIODevice;
+import org.jpc.emulator.block.backing.FileBackedSeekableIODevice;
+import org.jpc.emulator.block.backing.RemoteSeekableIODevice;
+import org.jpc.emulator.block.backing.SeekableIODevice;
 
 /**
- * Represents the set of disk drive devices associated with this emulator
- * instance.
+ * Represents the set of disk drive devices associated with this emulator instance.
  * @author Chris Dennis
  */
-public class DriveSet extends AbstractHardwareComponent
-{
+public class DriveSet extends AbstractHardwareComponent {
     private static final Logger LOGGING = Logger.getLogger(DriveSet.class.getName());
-    
-    public static enum BootType {FLOPPY, HARD_DRIVE, CDROM;}
 
-    private static enum Devices {
-        DEFAULT("org.jpc.support.FileBackedSeekableIODevice"),
-        
-        dir("org.jpc.support.TreeBlockDevice"),
-        mem("org.jpc.support.ArrayBackedSeekableIODevice"),
-        net("org.jpc.support.RemoteSeekableIODevice");
+    public enum BootType {
+        FLOPPY, HARD_DRIVE, CDROM;
+    }
 
-        private final String clazzname;
-        
-        Devices(String clazz)
-        {
-            clazzname = clazz;
+    private enum Devices {
+        DEFAULT(FileBackedSeekableIODevice.class),
+
+        dir(TreeBlockDevice.class), //
+        mem(ArrayBackedSeekableIODevice.class), //
+        net(RemoteSeekableIODevice.class);
+
+        private final Class<?> clazz;
+
+        Devices(Class<?> clazz) {
+            this.clazz = clazz;
         }
-        
-        public Object getInstance()
-        {
+
+        public Object getInstance() {
             try {
-                Class clazz = Class.forName(clazzname);
-                return clazz.newInstance();
-            } catch (ClassNotFoundException e) {
-                LOGGING.log(Level.WARNING, "Drive device class not found", e);
-                return null;
-            } catch (InstantiationException e) {
-                LOGGING.log(Level.WARNING, "Drive device couldn't be instantiated", e);
-                return null;
-            } catch (IllegalAccessException e) {
+                return clazz.getDeclaredConstructor().newInstance();
+            } catch (Exception e) {
                 LOGGING.log(Level.WARNING, "Drive device couldn't be instantiated", e);
                 return null;
             }
-        }        
+        }
     }
-    
+
     private BootType bootType;
     private BlockDevice[] floppies;
     private BlockDevice[] ides;
     private String[] initialArgs;
 
     /**
-     * Constructs a driveset with one hard disk, one floppy disk and the
-     * specified boot device type.
+     * Constructs a driveset with one hard disk, one floppy disk and the specified boot device type.
      * @param boot boot device
      * @param floppyDrive first floppy device
      * @param hardDrive primary master hard disk device
      */
-    public DriveSet(BootType boot, BlockDevice floppyDrive, BlockDevice hardDrive)
-    {
+    public DriveSet(BootType boot, BlockDevice floppyDrive, BlockDevice hardDrive) {
         this(boot, floppyDrive, null, hardDrive, null, null, null);
     }
 
     /**
      * Constructs a driveset with all parameters specified.
      * <p>
-     * A drive set can be composed of at most four ide devices and two floppy
-     * drive devices.
+     * A drive set can be composed of at most four ide devices and two floppy drive devices.
      * @param boot boot device
      * @param floppyDriveA first floppy device
      * @param floppyDriveB second floppy device
@@ -114,8 +113,8 @@ public class DriveSet extends AbstractHardwareComponent
      * @param hardDriveC secondary master hard disk
      * @param hardDriveD secondary slave hard disk
      */
-    public DriveSet(BootType boot, BlockDevice floppyDriveA, BlockDevice floppyDriveB, BlockDevice hardDriveA, BlockDevice hardDriveB, BlockDevice hardDriveC, BlockDevice hardDriveD)
-    {
+    public DriveSet(BootType boot, BlockDevice floppyDriveA, BlockDevice floppyDriveB, BlockDevice hardDriveA, BlockDevice hardDriveB,
+        BlockDevice hardDriveC, BlockDevice hardDriveD) {
         this.bootType = boot;
 
         floppies = new BlockDevice[2];
@@ -125,30 +124,27 @@ public class DriveSet extends AbstractHardwareComponent
         ides = new BlockDevice[4];
         ides[0] = hardDriveA;
         ides[1] = hardDriveB;
-        ides[2] = (hardDriveC == null) ? new CDROMBlockDevice() : hardDriveC;
+        ides[2] = hardDriveC == null ? new CDROMBlockDevice() : hardDriveC;
         ides[3] = hardDriveD;
     }
 
-    private void setInitialArgs(String[] init)
-    {
+    private void setInitialArgs(String[] init) {
         initialArgs = init;
     }
 
     /**
      * Returns the i'th hard drive device.
      * <p>
-     * Devices are numbered from 0 to 3 inclusive in order: primary master,
-     * primary slave, secondary master, secondary slave.
+     * Devices are numbered from 0 to 3 inclusive in order: primary master, primary slave, secondary
+     * master, secondary slave.
      * @param index drive index
      * @return hard drive block device
      */
-    public BlockDevice getHardDrive(int index)
-    {
+    public BlockDevice getHardDrive(int index) {
         return ides[index];
     }
 
-    public void setHardDrive(int index, BlockDevice device)
-    {
+    public void setHardDrive(int index, BlockDevice device) {
         ides[index] = device;
     }
 
@@ -159,8 +155,7 @@ public class DriveSet extends AbstractHardwareComponent
      * @param index floppy drive index
      * @return floppy drive block device
      */
-    public BlockDevice getFloppyDrive(int index)
-    {
+    public BlockDevice getFloppyDrive(int index) {
         return floppies[index];
     }
 
@@ -168,17 +163,16 @@ public class DriveSet extends AbstractHardwareComponent
      * Returns the current boot device as determined by the boot type parameter.
      * @return boot block device
      */
-    public BlockDevice getBootDevice()
-    {
+    public BlockDevice getBootDevice() {
         switch (bootType) {
-            case FLOPPY:
-                return floppies[0];
-            case CDROM:
-                return ides[2];
-            case HARD_DRIVE:
-                return ides[0];
-            default:
-                return null;
+        case FLOPPY:
+            return floppies[0];
+        case CDROM:
+            return ides[2];
+        case HARD_DRIVE:
+            return ides[0];
+        default:
+            return null;
         }
     }
 
@@ -186,53 +180,49 @@ public class DriveSet extends AbstractHardwareComponent
      * Returns the boot type being used by this driveset.
      * @return boot type
      */
-    public BootType getBootType()
-    {
+    public BootType getBootType() {
         return bootType;
     }
 
-    private static Object createDevice(String spec)
-    {
+    private static Object createDevice(String spec) {
         if (spec == null) {
             return null;
         }
 
-	if ((spec.indexOf("\"") == 0) && (spec.indexOf("\"", 1) > 0))
-	    spec = spec.substring(1, spec.length()-2);
-
-	
+        if (spec.indexOf("\"") == 0 && spec.indexOf("\"", 1) > 0)
+            spec = spec.substring(1, spec.length() - 2);
 
         int colon = spec.indexOf(':');
         String deviceKey = "DEFAULT";
-	String deviceSpec = spec;
-        if ((colon >= 0) && (spec.indexOf("\\") != colon + 1)) {
+        String deviceSpec = spec;
+        if (colon >= 0 && spec.indexOf("\\") != colon + 1) {
             deviceKey = spec.substring(0, colon);
-	    deviceSpec = spec.substring(colon + 1);
+            deviceSpec = spec.substring(colon + 1);
         }
 
         Object device;
         if (deviceKey.startsWith("caching")) {
             deviceKey = "DEFAULT";
             int secondcolon = deviceSpec.indexOf(':');
-            if ((secondcolon > 0) && (deviceSpec.indexOf("\\") != secondcolon + 1)) {
+            if (secondcolon > 0 && deviceSpec.indexOf("\\") != secondcolon + 1) {
                 deviceSpec = deviceSpec.substring(secondcolon + 1);
                 deviceKey = deviceSpec.substring(0, secondcolon);
             }
             device = Devices.valueOf(deviceKey).getInstance();
-            device = new CachingSeekableIODevice((SeekableIODevice) device);
+            device = new CachingSeekableIODevice((SeekableIODevice)device);
         } else
             device = Devices.valueOf(deviceKey).getInstance();
 
         if (device instanceof SeekableIODevice) {
             try {
-                ((SeekableIODevice) device).configure(deviceSpec);
+                ((SeekableIODevice)device).configure(deviceSpec);
             } catch (IOException e) {
                 return null;
             }
             return device;
         } else if (device instanceof BlockDevice) {
             try {
-                ((BlockDevice) device).configure(deviceSpec);
+                ((BlockDevice)device).configure(deviceSpec);
             } catch (IOException e) {
                 return null;
             }
@@ -242,45 +232,42 @@ public class DriveSet extends AbstractHardwareComponent
         }
     }
 
-    private static BlockDevice createFloppyBlockDevice(String spec)
-    {
+    private static BlockDevice createFloppyBlockDevice(String spec) {
         Object device = createDevice(spec);
 
         if (device instanceof SeekableIODevice)
-            return new FloppyBlockDevice((SeekableIODevice) device);
+            return new FloppyBlockDevice((SeekableIODevice)device);
         else
-            return (BlockDevice) device;
+            return (BlockDevice)device;
     }
 
-    private static BlockDevice createHardDiskBlockDevice(String spec)
-    {
+    private static BlockDevice createHardDiskBlockDevice(String spec) {
         Object device = createDevice(spec);
 
         if (device instanceof SeekableIODevice)
-            return new HDBlockDevice((SeekableIODevice) device);
+            return new HDBlockDevice((SeekableIODevice)device);
         else
-            return (BlockDevice) device;
+            return (BlockDevice)device;
     }
 
-    private static BlockDevice createCdRomBlockDevice(String spec)
-    {
+    private static BlockDevice createCdRomBlockDevice(String spec) {
         Object device = createDevice(spec);
 
         if (device instanceof SeekableIODevice)
-            return new CDROMBlockDevice((SeekableIODevice) device);
+            return new CDROMBlockDevice((SeekableIODevice)device);
         else
-            return (BlockDevice) device;
+            return (BlockDevice)device;
     }
 
-    public void saveState(DataOutput output) throws IOException
-    {
+    @Override
+    public void saveState(DataOutput output) throws IOException {
         output.writeInt(initialArgs.length);
-        for (int i = 0; i < initialArgs.length; i++)
-            output.writeUTF(initialArgs[i]);
+        for (String initialArg : initialArgs)
+            output.writeUTF(initialArg);
     }
 
-    public void loadState(DataInput input) throws IOException
-    {
+    @Override
+    public void loadState(DataInput input) throws IOException {
         int len = input.readInt();
         String[] newArgs = new String[len];
         for (int i = 0; i < len; i++)
@@ -299,13 +286,11 @@ public class DriveSet extends AbstractHardwareComponent
     }
 
     /**
-     * Constructs a driveset instance by parsing the given command line
-     * arguments.
+     * Constructs a driveset instance by parsing the given command line arguments.
      * @param args command line argument array
      * @return resultant <code>DriveSet</code>
      */
-    public static DriveSet buildFromArgs(String[] args)
-    {
+    public static DriveSet buildFromArgs(String[] args) {
         String[] initialArgs = args.clone();
 
         BlockDevice floppyA = createFloppyBlockDevice(ArgProcessor.findVariable(args, "-fda", null));
@@ -338,12 +323,11 @@ public class DriveSet extends AbstractHardwareComponent
         return temp;
     }
 
-    public void close()
-    {
-        for (BlockDevice d: ides)
+    public void close() {
+        for (BlockDevice d : ides)
             if (d != null)
                 d.close();
-        for (BlockDevice d: floppies)
+        for (BlockDevice d : floppies)
             if (d != null)
                 d.close();
     }

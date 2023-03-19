@@ -1,5 +1,8 @@
 /*
     JPC: An x86 PC Hardware Emulator for a pure Java Virtual Machine
+    Release Version 3.0
+
+    A project by Ian Preston, ianopolous AT gmail.com
 
     Copyright (C) 2012-2013 Ian Preston
 
@@ -15,8 +18,8 @@
     You should have received a copy of the GNU General Public License along
     with this program; if not, write to the Free Software Foundation, Inc.,
     51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
- 
-    Details (including contact information) can be found at: 
+
+    Details (including current contact information) can be found at:
 
     jpc.sourceforge.net
     or the developer website
@@ -27,46 +30,43 @@
 
 package org.jpc.emulator.execution.opcodes.rm;
 
-import org.jpc.emulator.execution.*;
-import org.jpc.emulator.execution.decoder.*;
-import org.jpc.emulator.processor.*;
-import org.jpc.emulator.processor.fpu64.*;
-import static org.jpc.emulator.processor.Processor.*;
+import org.jpc.emulator.execution.Executable;
+import org.jpc.emulator.execution.decoder.Modrm;
+import org.jpc.emulator.execution.decoder.PeekableInputStream;
+import org.jpc.emulator.processor.Processor;
 
-public class retf_Iw extends Executable
-{
+public class retf_Iw extends Executable {
     final int immw;
     final int blockLength;
     final int instructionLength;
 
-    public retf_Iw(int blockStart, int eip, int prefices, PeekableInputStream input)
-    {
+    public retf_Iw(int blockStart, int eip, int prefices, PeekableInputStream input) {
         super(blockStart, eip);
         immw = Modrm.Iw(input);
-        instructionLength = (int)input.getAddress()-eip;
-        blockLength = eip-blockStart+instructionLength;
+        instructionLength = (int)input.getAddress() - eip;
+        blockLength = eip - blockStart + instructionLength;
     }
 
-    public Branch execute(Processor cpu)
-    {
+    @Override
+    public Branch execute(Processor cpu) {
         //System.out.printf("Reading far return address from %08x\n", cpu.r_esp.get32());
-        cpu.eip = 0xFFFF&cpu.pop16();
+        cpu.eip = 0xFFFF & cpu.pop16();
         //System.out.printf("Far return to eip=%08x\n", cpu.eip);
         cpu.cs(0xffff & cpu.pop16());
         if (cpu.ss.getDefaultSizeFlag())
-            cpu.r_esp.set32(cpu.r_esp.get32()+immw);
+            cpu.r_esp.set32(cpu.r_esp.get32() + immw);
         else
-            cpu.r_sp.set16(cpu.r_esp.get16()+immw);
+            cpu.r_sp.set16(cpu.r_esp.get16() + immw);
         return Branch.Ret;
     }
 
-    public boolean isBranch()
-    {
+    @Override
+    public boolean isBranch() {
         return true;
     }
 
-    public String toString()
-    {
-        return this.getClass().getName();
+    @Override
+    public String toString() {
+        return "retf" + " " + Integer.toHexString(immw);
     }
 }

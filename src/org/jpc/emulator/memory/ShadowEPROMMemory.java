@@ -18,8 +18,8 @@
     You should have received a copy of the GNU General Public License along
     with this program; if not, write to the Free Software Foundation, Inc.,
     51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
- 
-    Details (including contact information) can be found at: 
+
+    Details (including contact information) can be found at:
 
     jpc.sourceforge.net
     or the developer website
@@ -33,18 +33,16 @@
 
 package org.jpc.emulator.memory;
 
-import org.jpc.emulator.execution.codeblock.CodeBlockManager;
-
-import java.util.logging.Level;
 import java.util.logging.Logger;
 
+import org.jpc.emulator.execution.codeblock.CodeBlockManager;
+
 /**
- * Provides an Eprom memory implementation  which shadows another page depending on permissions.
+ * Provides an Eprom memory implementation which shadows another page depending on permissions.
  * <p>
  * @author Ian Preston
  */
-public class ShadowEPROMMemory extends EPROMMemory
-{
+public class ShadowEPROMMemory extends EPROMMemory {
     private static final Logger LOGGING = Logger.getLogger(ShadowEPROMMemory.class.getName());
 
     private final Memory rom;
@@ -54,46 +52,45 @@ public class ShadowEPROMMemory extends EPROMMemory
      * @param rom the backing memory
      * @param size length of the instance.
      */
-    public ShadowEPROMMemory(int size, Memory rom, CodeBlockManager manager)
-    {
+    public ShadowEPROMMemory(int size, Memory rom, CodeBlockManager manager) {
         super(size, manager);
         this.rom = rom;
     }
 
-    public byte getByte(int offset)
-    {
+    @Override
+    public byte getByte(int offset) {
         if (readable())
             return super.getByte(offset);
         else
             return rom.getByte(offset);
     }
 
-    public short getWord(int offset)
-    {
+    @Override
+    public short getWord(int offset) {
         if (readable())
             return super.getWord(offset);
         else
             return rom.getWord(offset);
     }
 
-    public int getDoubleWord(int offset)
-    {
+    @Override
+    public int getDoubleWord(int offset) {
         if (readable())
             return super.getDoubleWord(offset);
         else
             return rom.getDoubleWord(offset);
     }
 
-    public void copyContentsIntoArray(int address, byte[] buffer, int off, int len)
-    {
+    @Override
+    public void copyContentsIntoArray(int address, byte[] buffer, int off, int len) {
         if (readable())
             super.copyContentsIntoArray(address, buffer, off, len);
         else
             rom.copyContentsIntoArray(address, buffer, off, len);
     }
 
-    public String toString()
-    {
+    @Override
+    public String toString() {
         return "Shadow EPROM Memory [" + getSize() + "]";
     }
 }

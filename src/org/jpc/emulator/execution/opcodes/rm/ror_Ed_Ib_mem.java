@@ -1,5 +1,8 @@
 /*
     JPC: An x86 PC Hardware Emulator for a pure Java Virtual Machine
+    Release Version 3.0
+
+    A project by Ian Preston, ianopolous AT gmail.com
 
     Copyright (C) 2012-2013 Ian Preston
 
@@ -15,8 +18,8 @@
     You should have received a copy of the GNU General Public License along
     with this program; if not, write to the Free Software Foundation, Inc.,
     51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
- 
-    Details (including contact information) can be found at: 
+
+    Details (including current contact information) can be found at:
 
     jpc.sourceforge.net
     or the developer website
@@ -27,49 +30,46 @@
 
 package org.jpc.emulator.execution.opcodes.rm;
 
-import org.jpc.emulator.execution.*;
-import org.jpc.emulator.execution.decoder.*;
-import org.jpc.emulator.processor.*;
-import org.jpc.emulator.processor.fpu64.*;
-import static org.jpc.emulator.processor.Processor.*;
+import org.jpc.emulator.execution.Executable;
+import org.jpc.emulator.execution.decoder.Modrm;
+import org.jpc.emulator.execution.decoder.PeekableInputStream;
+import org.jpc.emulator.execution.decoder.Pointer;
+import org.jpc.emulator.processor.Processor;
 
-public class ror_Ed_Ib_mem extends Executable
-{
+public class ror_Ed_Ib_mem extends Executable {
     final Pointer op1;
     final int immb;
 
-    public ror_Ed_Ib_mem(int blockStart, int eip, int prefices, PeekableInputStream input)
-    {
+    public ror_Ed_Ib_mem(int blockStart, int eip, int prefices, PeekableInputStream input) {
         super(blockStart, eip);
         int modrm = input.readU8();
         op1 = Modrm.getPointer(prefices, modrm, input);
         immb = Modrm.Ib(input);
     }
 
-    public Branch execute(Processor cpu)
-    {
-            int shift = immb & (32-1);
-            int reg0 = op1.get32(cpu);
-            int res = (reg0 >>> shift) | (reg0 << (32 - shift));
-            op1.set32(cpu, res);
-            boolean bit30  = (res & (1 << (32-2))) != 0;
-            boolean bit31 = (res & (1 << (32-1))) != 0;
-            if (shift > 0)
-            {
-                cpu.cf = bit31;
-                cpu.of = bit30 ^ bit31;
-                cpu.flagStatus &= NOFCF;
-            }
+    @Override
+    public Branch execute(Processor cpu) {
+        int shift = immb & 32 - 1;
+        int reg0 = op1.get32(cpu);
+        int res = reg0 >>> shift | reg0 << 32 - shift;
+        op1.set32(cpu, res);
+        boolean bit30 = (res & 1 << 32 - 2) != 0;
+        boolean bit31 = (res & 1 << 32 - 1) != 0;
+        if (shift > 0) {
+            cpu.cf = bit31;
+            cpu.of = bit30 ^ bit31;
+            cpu.flagStatus &= NOFCF;
+        }
         return Branch.None;
     }
 
-    public boolean isBranch()
-    {
+    @Override
+    public boolean isBranch() {
         return false;
     }
 
-    public String toString()
-    {
-        return this.getClass().getName();
+    @Override
+    public String toString() {
+        return "ror" + " " + "[" + op1.toString() + "]" + ", " + Integer.toHexString(immb);
     }
 }

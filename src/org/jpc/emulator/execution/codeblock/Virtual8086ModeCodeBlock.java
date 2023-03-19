@@ -18,8 +18,8 @@
     You should have received a copy of the GNU General Public License along
     with this program; if not, write to the Free Software Foundation, Inc.,
     51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
- 
-    Details (including contact information) can be found at: 
+
+    Details (including contact information) can be found at:
 
     jpc.sourceforge.net
     or the developer website
@@ -37,6 +37,5 @@ package org.jpc.emulator.execution.codeblock;
  * A single chunk of Virtual-8086 mode executable code.
  * @author Chris Dennis
  */
-public interface Virtual8086ModeCodeBlock extends CodeBlock
-{
+public interface Virtual8086ModeCodeBlock extends CodeBlock {
 }

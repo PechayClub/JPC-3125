@@ -1,5 +1,8 @@
 /*
     JPC: An x86 PC Hardware Emulator for a pure Java Virtual Machine
+    Release Version 3.0
+
+    A project by Ian Preston, ianopolous AT gmail.com
 
     Copyright (C) 2012-2013 Ian Preston
 
@@ -15,8 +18,8 @@
     You should have received a copy of the GNU General Public License along
     with this program; if not, write to the Free Software Foundation, Inc.,
     51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
- 
-    Details (including contact information) can be found at: 
+
+    Details (including current contact information) can be found at:
 
     jpc.sourceforge.net
     or the developer website
@@ -27,28 +30,27 @@
 
 package org.jpc.emulator.execution.opcodes.vm;
 
-import org.jpc.emulator.execution.*;
-import org.jpc.emulator.execution.decoder.*;
-import org.jpc.emulator.processor.*;
-import org.jpc.emulator.processor.fpu64.*;
-import static org.jpc.emulator.processor.Processor.*;
+import org.jpc.emulator.execution.Executable;
+import org.jpc.emulator.execution.decoder.Modrm;
+import org.jpc.emulator.execution.decoder.PeekableInputStream;
+import org.jpc.emulator.execution.decoder.Pointer;
+import org.jpc.emulator.processor.Processor;
+import org.jpc.emulator.processor.ProcessorException;
 
-public class idiv_Ed_mem extends Executable
-{
+public class idiv_Ed_mem extends Executable {
     final Pointer op1;
 
-    public idiv_Ed_mem(int blockStart, int eip, int prefices, PeekableInputStream input)
-    {
+    public idiv_Ed_mem(int blockStart, int eip, int prefices, PeekableInputStream input) {
         super(blockStart, eip);
         int modrm = input.readU8();
         op1 = Modrm.getPointer(prefices, modrm, input);
     }
 
-    public Branch execute(Processor cpu)
-    {
+    @Override
+    public Branch execute(Processor cpu) {
         if (op1.get32(cpu) == 0)
             throw ProcessorException.DIVIDE_ERROR;
-        long ldiv = (((0xffffffffL & cpu.r_edx.get32())) << 32 ) | (0xffffffffL & cpu.r_eax.get32());
+        long ldiv = (0xffffffffL & cpu.r_edx.get32()) << 32 | 0xffffffffL & cpu.r_eax.get32();
         long quot64 = ldiv / op1.get32(cpu);
         if (quot64 != (int)quot64)
             throw ProcessorException.DIVIDE_ERROR;
@@ -57,13 +59,13 @@ public class idiv_Ed_mem extends Executable
         return Branch.None;
     }
 
-    public boolean isBranch()
-    {
+    @Override
+    public boolean isBranch() {
         return false;
     }
 
-    public String toString()
-    {
-        return this.getClass().getName();
+    @Override
+    public String toString() {
+        return "idiv" + " " + "[" + op1.toString() + "]";
     }
 }

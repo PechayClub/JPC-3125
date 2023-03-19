@@ -18,8 +18,8 @@
     You should have received a copy of the GNU General Public License along
     with this program; if not, write to the Free Software Foundation, Inc.,
     51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
- 
-    Details (including contact information) can be found at: 
+
+    Details (including contact information) can be found at:
 
     jpc.sourceforge.net
     or the developer website
@@ -34,47 +34,45 @@
 package org.jpc.emulator.pci;
 
 /**
- * A region provided by a PCI device that can at runtime be mapped into one of
- * the emulated machines address spaces.
+ * A region provided by a PCI device that can at runtime be mapped into one of the emulated machines
+ * address spaces.
  * @author Chris Dennis
  */
-public interface IORegion
-{
-    public static final int PCI_ADDRESS_SPACE_MEM = 0x00;
-    public static final int PCI_ADDRESS_SPACE_IO = 0x01;
-    public static final int PCI_ADDRESS_SPACE_MEM_PREFETCH = 0x08;
+public interface IORegion {
+    int PCI_ADDRESS_SPACE_MEM = 0x00;
+    int PCI_ADDRESS_SPACE_IO = 0x01;
+    int PCI_ADDRESS_SPACE_MEM_PREFETCH = 0x08;
 
     /**
      * Returns the starting address of the area that this region is mapped to.
      * @return starting address of this region.
      */
-    public int getAddress();
+    int getAddress();
 
     /**
      * Returns the length of this region in bytes.
      * @return size in bytes.
      */
-    public long getSize();
+    long getSize();
 
     /**
      * Returns an integer representing the type of this region.
      * @return integer type.
      */
-    public int getType();
+    int getType();
 
     /**
      * Returns the region number or index of this region.
      * <p>
-     * In any given PCI device, <code>IORegion</code>s are not required to be
-     * contiguous.
+     * In any given PCI device, <code>IORegion</code>s are not required to be contiguous.
      * @return region number.
      */
-    public int getRegionNumber();
+    int getRegionNumber();
 
     /**
-     * Tells this region that it has been mapped into it's associated address 
-     * space at the given address.
+     * Tells this region that it has been mapped into it's associated address space at the given
+     * address.
      * @param address start address of the mapping.
      */
-    public void setAddress(int address);
+    void setAddress(int address);
 }

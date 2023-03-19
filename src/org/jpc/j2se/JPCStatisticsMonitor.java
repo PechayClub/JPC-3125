@@ -18,8 +18,8 @@
     You should have received a copy of the GNU General Public License along
     with this program; if not, write to the Free Software Foundation, Inc.,
     51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
- 
-    Details (including contact information) can be found at: 
+
+    Details (including contact information) can be found at:
 
     jpc.sourceforge.net
     or the developer website
@@ -37,17 +37,22 @@
  */
 package org.jpc.j2se;
 
-import java.io.*;
-import java.lang.management.*;
-import java.util.*;
-import java.util.logging.*;
+import java.io.IOException;
+import java.lang.management.ClassLoadingMXBean;
+import java.lang.management.ManagementFactory;
+import java.lang.management.MemoryPoolMXBean;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Timer;
+import java.util.TimerTask;
+import java.util.logging.FileHandler;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 /**
- *
  * @author Chris Dennis
  */
-public class JPCStatisticsMonitor extends TimerTask
-{
+public class JPCStatisticsMonitor extends TimerTask {
     private static final Logger LOGGING = Logger.getLogger(JPCStatisticsMonitor.class.getName());
     private static final Timer statsTimer = new Timer("Stats Timer", true);
     private static final ClassLoadingMXBean classLoadingBean = ManagementFactory.getClassLoadingMXBean();
@@ -57,16 +62,14 @@ public class JPCStatisticsMonitor extends TimerTask
         jpcVmStatus.setUseParentHandlers(false);
         jpcVmStatus.setLevel(Level.ALL);
     }
-    
-    private JPCStatisticsMonitor(String to) throws IOException
-    {
-        jpcVmStatus.addHandler(new FileHandler(to));         
+
+    private JPCStatisticsMonitor(String to) throws IOException {
+        jpcVmStatus.addHandler(new FileHandler(to));
     }
 
-    public static void install() throws IOException
-    {
+    public static void install() throws IOException {
         try {
-            String logging = System.getProperty("org.jpc.monitor");            
+            String logging = System.getProperty("org.jpc.monitor");
             if (logging != null) {
                 try {
                     statsTimer.scheduleAtFixedRate(new JPCStatisticsMonitor(logging), 0, 5000);
@@ -79,8 +82,8 @@ public class JPCStatisticsMonitor extends TimerTask
         }
     }
 
-    public void run()
-    {
+    @Override
+    public void run() {
         List params = new ArrayList();
         StringBuilder line = new StringBuilder();
 

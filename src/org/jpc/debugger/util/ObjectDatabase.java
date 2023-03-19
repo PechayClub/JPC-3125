@@ -18,8 +18,8 @@
     You should have received a copy of the GNU General Public License along
     with this program; if not, write to the Free Software Foundation, Inc.,
     51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
- 
-    Details (including contact information) can be found at: 
+
+    Details (including contact information) can be found at:
 
     jpc.sourceforge.net
     or the developer website
@@ -31,66 +31,56 @@
     End of licence header
 */
 
-
 package org.jpc.debugger.util;
 
-import java.util.*;
 import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
-public class ObjectDatabase
-{
-    private Map<Class, Object> table;
+public class ObjectDatabase {
+    private Map<Class<?>, Object> table;
 
-    public ObjectDatabase()
-    {
-        table = new HashMap<Class, Object>();
+    public ObjectDatabase() {
+        table = new HashMap<Class<?>, Object>();
     }
 
-    public synchronized boolean addObject(Class cls, Object value)
-    {
-        if (value == null)
-            return false;
-
-        if (table.containsKey(cls))
+    public synchronized boolean addObject(Class<?> cls, Object value) {
+        if ((value == null) || table.containsKey(cls))
             return false;
 
         table.put(cls, value);
         return true;
     }
 
-    public synchronized boolean addObject(Object value)
-    {
+    public synchronized boolean addObject(Object value) {
         if (value == null)
             return false;
 
-        Class cls = (Class) value.getClass();
+        Class<?> cls = value.getClass();
 
         return addObject(cls, value);
     }
 
-    public synchronized Object getObject(Class cls)
-    {
+    public synchronized Object getObject(Class<?> cls) {
         return table.get(cls);
     }
 
-    public synchronized Object removeObject(Object obj)
-    {
+    public synchronized Object removeObject(Object obj) {
         if (obj == null)
             return null;
-        
+
         return removeObject(obj.getClass());
     }
 
-    public synchronized Object removeObject(Class cls)
-    {
+    public synchronized Object removeObject(Class<?> cls) {
         if (cls == null)
             return null;
 
         return table.remove(cls);
     }
 
-    public synchronized List<Object> entries()
-    {
+    public synchronized List<Object> entries() {
         return new ArrayList<Object>(table.values());
     }
 }

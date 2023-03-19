@@ -18,8 +18,8 @@
     You should have received a copy of the GNU General Public License along
     with this program; if not, write to the Free Software Foundation, Inc.,
     51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
- 
-    Details (including contact information) can be found at: 
+
+    Details (including contact information) can be found at:
 
     jpc.sourceforge.net
     or the developer website
@@ -39,30 +39,26 @@ import org.jpc.emulator.execution.decoder.PeekableInputStream;
  * Converts a stream of x86 bytecodes into an executable codeblock.
  * @author Chris Dennis
  */
-public interface CodeBlockFactory
-{
+public interface CodeBlockFactory {
     /**
      * Create a real-mode codeblock from the given byte source.
-     *
      * @param source bytes read from here
      * @return codeblock instance
      */
-    public RealModeCodeBlock getRealModeCodeBlock(PeekableInputStream source);
+    RealModeCodeBlock getRealModeCodeBlock(PeekableInputStream source);
 
     /**
      * Create a protected-mode codeblock from the given byte source.
-     *
      * @param source bytes read from here
      * @param operandSize <code>true if the default operand size is 32-bit
      * @return codeblock instance
      */
-    public ProtectedModeCodeBlock getProtectedModeCodeBlock(PeekableInputStream source, boolean operandSize);
+    ProtectedModeCodeBlock getProtectedModeCodeBlock(PeekableInputStream source, boolean operandSize);
 
     /**
      * Create a virtual8086-mode codeblock from the given byte source.
-     *
      * @param source bytes read from here
      * @return codeblock instance
      */
-    public Virtual8086ModeCodeBlock getVirtual8086ModeCodeBlock(PeekableInputStream source);
+    Virtual8086ModeCodeBlock getVirtual8086ModeCodeBlock(PeekableInputStream source);
 }

@@ -18,8 +18,8 @@
     You should have received a copy of the GNU General Public License along
     with this program; if not, write to the Free Software Foundation, Inc.,
     51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
- 
-    Details (including contact information) can be found at: 
+
+    Details (including contact information) can be found at:
 
     jpc.sourceforge.net
     or the developer website
@@ -36,7 +36,6 @@ package org.jpc.debugger;
 import org.jpc.emulator.processor.Processor;
 
 /**
- *
  * @author Ian Preston
  */
 public abstract class Breakpoint implements Comparable<Breakpoint> {
@@ -45,22 +44,23 @@ public abstract class Breakpoint implements Comparable<Breakpoint> {
     private boolean isPrimary;
     private String name;
 
-    public Breakpoint(String name, int address, boolean primary)
-    {
+    public Breakpoint(String name, int address, boolean primary) {
         this.name = name;
         this.address = address;
         this.isPrimary = primary;
     }
-    
+
     public abstract boolean satisfied(Processor cpu);
 
+    @Override
     public boolean equals(Object another) {
         if (!(another instanceof Breakpoint)) {
             return false;
         }
-        return address == ((Breakpoint) another).address;
+        return address == ((Breakpoint)another).address;
     }
 
+    @Override
     public int compareTo(Breakpoint bp) {
         return address - bp.address;
     }

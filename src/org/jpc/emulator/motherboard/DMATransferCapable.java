@@ -18,8 +18,8 @@
     You should have received a copy of the GNU General Public License along
     with this program; if not, write to the Free Software Foundation, Inc.,
     51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
- 
-    Details (including contact information) can be found at: 
+
+    Details (including contact information) can be found at:
 
     jpc.sourceforge.net
     or the developer website
@@ -37,15 +37,14 @@ package org.jpc.emulator.motherboard;
  * Implemented by devices that can perform DMA transfers.
  * @author Chris Dennis
  */
-public interface DMATransferCapable
-{
+public interface DMATransferCapable {
     /**
-     * Requests that this <code>DMATransferCapable</code> device perform a dma
-     * transfer to/from the requested channel.
+     * Requests that this <code>DMATransferCapable</code> device perform a dma transfer to/from the
+     * requested channel.
      * @param channel points to memory region in question.
      * @param position position in current transfer.
      * @param size number of bytes to be transferred.
      * @return updated position in transfer.
      */
-    public int handleTransfer(DMAController.DMAChannel channel, int position, int size);
+    int handleTransfer(DMAController.DMAChannel channel, int position, int size);
 }

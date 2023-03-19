@@ -1,5 +1,8 @@
 /*
     JPC: An x86 PC Hardware Emulator for a pure Java Virtual Machine
+    Release Version 3.0
+
+    A project by Ian Preston, ianopolous AT gmail.com
 
     Copyright (C) 2012-2013 Ian Preston
 
@@ -15,8 +18,8 @@
     You should have received a copy of the GNU General Public License along
     with this program; if not, write to the Free Software Foundation, Inc.,
     51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
- 
-    Details (including contact information) can be found at: 
+
+    Details (including current contact information) can be found at:
 
     jpc.sourceforge.net
     or the developer website
@@ -27,25 +30,23 @@
 
 package org.jpc.emulator.execution.opcodes.vm;
 
-import org.jpc.emulator.execution.*;
-import org.jpc.emulator.execution.decoder.*;
-import org.jpc.emulator.processor.*;
-import org.jpc.emulator.processor.fpu64.*;
-import static org.jpc.emulator.processor.Processor.*;
+import org.jpc.emulator.execution.Executable;
+import org.jpc.emulator.execution.UCodes;
+import org.jpc.emulator.execution.decoder.Modrm;
+import org.jpc.emulator.execution.decoder.PeekableInputStream;
+import org.jpc.emulator.processor.Processor;
 
-public class sub_o16_rAX_Iw extends Executable
-{
+public class sub_o16_rAX_Iw extends Executable {
     final int immw;
 
-    public sub_o16_rAX_Iw(int blockStart, int eip, int prefices, PeekableInputStream input)
-    {
+    public sub_o16_rAX_Iw(int blockStart, int eip, int prefices, PeekableInputStream input) {
         super(blockStart, eip);
         immw = Modrm.Iw(input);
     }
 
-    public Branch execute(Processor cpu)
-    {
-        cpu.flagOp1 = (short)cpu.r_eax.get16();
+    @Override
+    public Branch execute(Processor cpu) {
+        cpu.flagOp1 = cpu.r_eax.get16();
         cpu.flagOp2 = (short)immw;
         cpu.flagResult = (short)(cpu.flagOp1 - cpu.flagOp2);
         cpu.r_eax.set16((short)cpu.flagResult);
@@ -54,13 +55,13 @@ public class sub_o16_rAX_Iw extends Executable
         return Branch.None;
     }
 
-    public boolean isBranch()
-    {
+    @Override
+    public boolean isBranch() {
         return false;
     }
 
-    public String toString()
-    {
-        return this.getClass().getName();
+    @Override
+    public String toString() {
+        return "sub_o16" + " " + "rAX" + ", " + Integer.toHexString(immw);
     }
 }

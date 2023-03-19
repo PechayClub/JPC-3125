@@ -18,8 +18,8 @@
     You should have received a copy of the GNU General Public License along
     with this program; if not, write to the Free Software Foundation, Inc.,
     51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
- 
-    Details (including contact information) can be found at: 
+
+    Details (including contact information) can be found at:
 
     jpc.sourceforge.net
     or the developer website
@@ -33,39 +33,44 @@
 
 package org.jpc.j2se;
 
-import java.awt.*;
-import java.io.*;
+import java.awt.Color;
+import java.awt.Component;
+import java.awt.Dimension;
+import java.awt.Graphics;
+import java.awt.Graphics2D;
+import java.awt.LayoutManager;
+import java.io.DataInputStream;
+import java.io.DataOutputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
+import java.util.Locale;
 
-import javax.swing.JScrollPane;
-
-import org.jpc.emulator.*;
-import org.jpc.emulator.pci.peripheral.*;
-import org.jpc.emulator.peripheral.*;
+import org.jpc.emulator.Monitor;
+import org.jpc.emulator.PC;
+import org.jpc.emulator.pci.VGACard;
+import org.jpc.emulator.peripheral.Keyboard;
 
 /**
- * 
  * @author Rhys Newman
  */
-public class PCMonitor extends KeyHandlingPanel 
-{
+public class PCMonitor extends KeyHandlingPanel implements Monitor {
     private Keyboard keyboard;
-    private DefaultVGACard vgaCard;
+    private VGACard vgaCard;
     private Updater updater;
     private Component frame = null;
     private PC pc;
     private double scaleX = 1.0;
     private double scaleY = 1.0;
     private boolean ignoreResize = false;
-    
+
     private volatile boolean clearBackground;
 
-    public PCMonitor(PC pc) 
-    {
+    public PCMonitor(PC pc) {
         this(null, pc);
     }
 
-    public PCMonitor(LayoutManager mgr, PC pc) 
-    {
+    public PCMonitor(LayoutManager mgr, PC pc) {
         super(mgr);
         this.pc = pc;
 
@@ -73,28 +78,26 @@ public class PCMonitor extends KeyHandlingPanel
         setDoubleBuffered(false);
         requestFocusInWindow();
 
-        vgaCard = (DefaultVGACard) pc.getComponent(VGACard.class);
+        vgaCard = (VGACard)pc.getComponent(VGACard.class);
         vgaCard.setMonitor(this);
         vgaCard.resizeDisplay(720, 480);
-        keyboard = (Keyboard) pc.getComponent(Keyboard.class);
+        keyboard = (Keyboard)pc.getComponent(Keyboard.class);
         setInputMap(WHEN_FOCUSED, null);
     }
 
-    protected PC getPC()
-    {
+    protected PC getPC() {
         return pc;
     }
 
-    public void saveState(OutputStream out) throws IOException 
-    {
+    public void saveState(OutputStream out) throws IOException {
         int[] rawImageData = vgaCard.getDisplayBuffer();
         byte[] dummy = new byte[rawImageData.length * 4];
         for (int i = 0, j = 0; i < rawImageData.length; i++) {
             int val = rawImageData[i];
-            dummy[j++] = (byte) (val >> 24);
-            dummy[j++] = (byte) (val >> 16);
-            dummy[j++] = (byte) (val >> 8);
-            dummy[j++] = (byte) (val);
+            dummy[j++] = (byte)(val >> 24);
+            dummy[j++] = (byte)(val >> 16);
+            dummy[j++] = (byte)(val >> 8);
+            dummy[j++] = (byte)val;
         }
 
         DataOutputStream output = new DataOutputStream(out);
@@ -103,8 +106,7 @@ public class PCMonitor extends KeyHandlingPanel
         out.flush();
     }
 
-    public void loadState(InputStream in) throws IOException 
-    {
+    public void loadState(InputStream in) throws IOException {
         DataInputStream input = new DataInputStream(in);
         int len = input.readInt();
         int[] rawImageData = vgaCard.getDisplayBuffer();
@@ -124,103 +126,84 @@ public class PCMonitor extends KeyHandlingPanel
         }
     }
 
-    public void setFrame(Component f) 
-    {
+    public void setFrame(Component f) {
         this.frame = f;
     }
 
-    public void repeatedKeyPress(int keyCode) 
-    {
-        keyboard.keyPressed(KeyMapping.getScancode(Integer.valueOf(keyCode)));
+    @Override
+    public void repeatedKeyPress(KeyboardKey key) {
+        keyboard.keyPressed(KeyMapping.getScancode(Locale.getDefault(), key));
     }
 
-    public void keyPressed(int keyCode) 
-    {
-        keyboard.keyPressed(KeyMapping.getScancode(Integer.valueOf(keyCode)));
+    @Override
+    public void keyPress(KeyboardKey key) {
+        keyboard.keyPressed(KeyMapping.getScancode(Locale.getDefault(), key));
     }
 
-    public void keyReleased(int keyCode) 
-    {
-        keyboard.keyReleased(KeyMapping.getScancode(Integer.valueOf(keyCode)));
+    @Override
+    public void keyRelease(KeyboardKey key) {
+        keyboard.keyReleased(KeyMapping.getScancode(Locale.getDefault(), key));
     }
 
-    public void mouseEventReceived(int dx, int dy, int dz, int buttons) 
-    {
+    @Override
+    public void mouseEventReceived(int dx, int dy, int dz, int buttons) {
         keyboard.putMouseEvent(dx, dy, dz, buttons);
     }
 
-    public synchronized void startUpdateThread() 
-    {
+    public synchronized void startUpdateThread() {
         stopUpdateThread();
         updater = new Updater();
         updater.start();
     }
 
-    public synchronized void stopUpdateThread() 
-    {
+    public synchronized void stopUpdateThread() {
         if (updater != null)
             updater.halt();
     }
 
-    public synchronized boolean isRunning() 
-    {
+    public synchronized boolean isRunning() {
         if (updater == null)
             return false;
         return updater.running;
     }
 
-    class Updater extends Thread 
-    {
+    class Updater extends Thread {
         private volatile boolean running = !Option.noScreen.isSet();
 
-        public Updater() 
-        {
+        public Updater() {
             super("PC Monitor Updater Task");
         }
 
-        public void run() 
-        {
-            while (running) 
-            {
-                try
-                {
+        @Override
+        public void run() {
+            while (running) {
+                try {
                     Thread.sleep(20);
+                } catch (InterruptedException e) {
                 }
-                catch (InterruptedException e) {}
 
                 vgaCard.prepareUpdate();
                 vgaCard.updateDisplay();
-                /*
-                int xmin = (int)((vgaCard.getXMin() -1 ) * scaleX);
-                int xmax = (int)(vgaCard.getXMax() * scaleX);
-                int ymin = (int)((vgaCard.getYMin() - 1) * scaleY);
-                int ymax = (int)(vgaCard.getYMax() * scaleY);
-                
-                repaint(xmin, ymin, xmax - xmin + 1, ymax - ymin + 1);
-                */
+
                 repaint();
             }
         }
 
-        public void halt() 
-        {
-            try 
-            {
+        public void halt() {
+            try {
                 running = false;
                 interrupt();
-            } 
-            catch (SecurityException e) {}
+            } catch (SecurityException e) {
+            }
         }
     }
 
-    public void resizeDisplay(int width, int height) 
-    {
-		resizeDisplayCommon((int)(width * scaleX), (int)(height * scaleY));
+    @Override
+    public void resizeDisplay(int width, int height) {
+        resizeDisplayCommon((int)(width * scaleX), (int)(height * scaleY));
     }
-    private void resizeDisplayCommon(int width, int height) 
-    {
-    	//System.out.println("resized X="+width+" Y="+height);
-    	//System.out.println("resized scaleX="+scaleX+" scaleY="+scaleY);
+
+    private void resizeDisplayCommon(int width, int height) {
         setPreferredSize(new Dimension(width, height));
         setMaximumSize(new Dimension(width, height));
         setMinimumSize(new Dimension(width, height));
@@ -230,34 +213,31 @@ public class PCMonitor extends KeyHandlingPanel
         repaint();
     }
 
-    public void scaleDisplay(int width, int height) 
-    {
-        
-    	Dimension display = vgaCard.getDisplaySize();
-    	double displayWidth=display.width;
-    	double displayHeight=display.height;
-    	if(width > displayWidth) {
-    		scaleX = width / displayWidth;
-    	}else{
-    		scaleX = 1.0;
-    	}
-    	if(height > displayHeight) {
-    		scaleY = height / displayHeight;
-    	}else{
-    		scaleY = 1.0;
-    	}
-    	//System.out.println("scale display scaleX="+scaleX+" scaleY="+scaleY + "actual x="+displayWidth+" y="+displayHeight);
+    public void scaleDisplay(int width, int height) {
+
+        Dimension display = vgaCard.getDisplaySize();
+        double displayWidth = display.width;
+        double displayHeight = display.height;
+        if (width > displayWidth) {
+            scaleX = width / displayWidth;
+        } else {
+            scaleX = 1.0;
+        }
+        if (height > displayHeight) {
+            scaleY = height / displayHeight;
+        } else {
+            scaleY = 1.0;
+        }
     }
 
-    public void update(Graphics g) 
-    {
+    @Override
+    public void update(Graphics g) {
         paint(g);
     }
 
-    public void paint(Graphics g) 
-    {
-        if (clearBackground)
-        {
+    @Override
+    public void paint(Graphics g) {
+        if (clearBackground) {
             g.setColor(Color.white);
             Dimension s1 = getSize();
             Dimension s2 = vgaCard.getDisplaySize();
@@ -268,6 +248,6 @@ public class PCMonitor extends KeyHandlingPanel
                 g.fillRect(0, s2.height, s1.width, s1.height - s2.height);
             clearBackground = false;
         }
-        vgaCard.paintPCMonitor((Graphics2D)g, this);
+        vgaCard.paintOnMonitor((Graphics2D)g);
     }
 }

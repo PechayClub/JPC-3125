@@ -1,5 +1,8 @@
 /*
     JPC: An x86 PC Hardware Emulator for a pure Java Virtual Machine
+    Release Version 3.0
+
+    A project by Ian Preston, ianopolous AT gmail.com
 
     Copyright (C) 2012-2013 Ian Preston
 
@@ -15,8 +18,8 @@
     You should have received a copy of the GNU General Public License along
     with this program; if not, write to the Free Software Foundation, Inc.,
     51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
- 
-    Details (including contact information) can be found at: 
+
+    Details (including current contact information) can be found at:
 
     jpc.sourceforge.net
     or the developer website
@@ -27,27 +30,28 @@
 
 package org.jpc.emulator.execution.opcodes.pm;
 
-import org.jpc.emulator.execution.*;
-import org.jpc.emulator.execution.decoder.*;
-import org.jpc.emulator.processor.*;
-import org.jpc.emulator.processor.fpu64.*;
-import static org.jpc.emulator.processor.Processor.*;
+import static org.jpc.emulator.processor.Processor.getRegString;
 
-public class cmpxchg_Eb_Gb extends Executable
-{
+import org.jpc.emulator.execution.Executable;
+import org.jpc.emulator.execution.UCodes;
+import org.jpc.emulator.execution.decoder.Modrm;
+import org.jpc.emulator.execution.decoder.PeekableInputStream;
+import org.jpc.emulator.processor.Processor;
+import org.jpc.emulator.processor.Processor.Reg;
+
+public class cmpxchg_Eb_Gb extends Executable {
     final int op1Index;
     final int op2Index;
 
-    public cmpxchg_Eb_Gb(int blockStart, int eip, int prefices, PeekableInputStream input)
-    {
+    public cmpxchg_Eb_Gb(int blockStart, int eip, int prefices, PeekableInputStream input) {
         super(blockStart, eip);
         int modrm = input.readU8();
         op1Index = Modrm.Eb(modrm);
         op2Index = Modrm.Gb(modrm);
     }
 
-    public Branch execute(Processor cpu)
-    {
+    @Override
+    public Branch execute(Processor cpu) {
         Reg op1 = cpu.regs[op1Index];
         Reg op2 = cpu.regs[op2Index];
         cpu.flagOp1 = cpu.r_eax.get8();
@@ -55,26 +59,23 @@ public class cmpxchg_Eb_Gb extends Executable
         cpu.flagResult = (byte)(cpu.flagOp1 - cpu.flagOp2);
         cpu.flagIns = UCodes.SUB8;
         cpu.flagStatus = OSZAPC;
-        if (cpu.flagOp1 == cpu.flagOp2)
-        {
+        if (cpu.flagOp1 == cpu.flagOp2) {
             cpu.zf(true);
             op1.set8((byte)op2.get8());
-        }
-        else
-        {
+        } else {
             cpu.zf(false);
             cpu.r_eax.set8(op1.get8());
         }
         return Branch.None;
     }
 
-    public boolean isBranch()
-    {
+    @Override
+    public boolean isBranch() {
         return false;
     }
 
-    public String toString()
-    {
-        return this.getClass().getName();
+    @Override
+    public String toString() {
+        return "cmpxchg" + " " + getRegString(op1Index) + ", " + getRegString(op2Index);
     }
 }

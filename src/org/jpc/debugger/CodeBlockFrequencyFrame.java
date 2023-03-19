@@ -18,8 +18,8 @@
     You should have received a copy of the GNU General Public License along
     with this program; if not, write to the Free Software Foundation, Inc.,
     51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
- 
-    Details (including contact information) can be found at: 
+
+    Details (including contact information) can be found at:
 
     jpc.sourceforge.net
     or the developer website
@@ -33,29 +33,34 @@
 
 package org.jpc.debugger;
 
-import java.util.*;
 import java.awt.Dimension;
-import java.awt.event.*;
-import java.util.logging.*;
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
+import java.util.Arrays;
+import java.util.Comparator;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
-import javax.swing.*;
+import javax.swing.JScrollPane;
+import javax.swing.JTable;
 
-import org.jpc.debugger.util.*;
-import org.jpc.emulator.memory.AddressSpace;
+import org.jpc.debugger.util.BasicTableModel;
+import org.jpc.debugger.util.UtilityFrame;
 import org.jpc.emulator.execution.codeblock.CodeBlock;
-import org.jpc.emulator.execution.decoder.*;
+import org.jpc.emulator.execution.decoder.Instruction;
+import org.jpc.emulator.memory.AddressSpace;
 
-public class CodeBlockFrequencyFrame extends UtilityFrame implements PCListener, ActionListener, CodeBlockListener, Comparator
-{
+public class CodeBlockFrequencyFrame extends UtilityFrame implements PCListener, ActionListener, CodeBlockListener, Comparator {
     private static final Logger LOGGING = Logger.getLogger(CodeBlockFrequencyFrame.class.getName());
-    
+
     private CodeBlockRecord record;
     private Map<String, OpcodeEntry> frequencies;
     private OpcodeEntry[] frequentCodes;
     private FrequencyModel model;
 
-    public CodeBlockFrequencyFrame() 
-    {
+    public CodeBlockFrequencyFrame() {
         super("CodeBlock Frequencies");
         frequencies = new HashMap<String, OpcodeEntry>();
         record = null;
@@ -71,112 +76,108 @@ public class CodeBlockFrequencyFrame extends UtilityFrame implements PCListener,
         add("Center", new JScrollPane(table));
     }
 
-    class OpcodeEntry
-    {
+    class OpcodeEntry {
         int frequency;
         String opName;
 
-        OpcodeEntry(String name, CodeBlock b)
-        { 
+        OpcodeEntry(String name, CodeBlock b) {
             frequency = 0;
             opName = name;
         }
-        
-        public int hashCode()
-        {
+
+        @Override
+        public int hashCode() {
             return opName.hashCode();
         }
 
-        public boolean equals(Object obj)
-        {
-            OpcodeEntry e = (OpcodeEntry) obj;
+        @Override
+        public boolean equals(Object obj) {
+            OpcodeEntry e = (OpcodeEntry)obj;
             if (!e.opName.equals(opName))
                 return false;
 
             return true;
         }
 
-        public String toString()
-        {
+        @Override
+        public String toString() {
             return opName;
         }
     }
 
-    public void actionPerformed(ActionEvent evt) {}
+    @Override
+    public void actionPerformed(ActionEvent evt) {
+    }
 
-    public void codeBlockDecoded(int address, AddressSpace memory, CodeBlock block) {}
+    @Override
+    public void codeBlockDecoded(int address, AddressSpace memory, CodeBlock block) {
+    }
 
-    public synchronized void codeBlockExecuted(int address, AddressSpace memory, CodeBlock block)
-    {
-        try
-        {
+    @Override
+    public synchronized void codeBlockExecuted(int address, AddressSpace memory, CodeBlock block) {
+        try {
             Instruction current = block.getInstructions();
-            for (; current != null; current = current.next)
-            {
+            for (; current != null; current = current.next) {
                 String currentName = current.getGeneralClassName(true, true);
                 OpcodeEntry e = frequencies.get(currentName);
-                if (e == null)
-                {
+                if (e == null) {
                     e = new OpcodeEntry(currentName, block);
                     frequencies.put(currentName, e);
                 }
                 e.frequency++;
             }
-        }
-        catch (Exception e)
-        {
-            LOGGING.log(Level.WARNING, "Error calculating freuqency of block: " + block,e);
+        } catch (Exception e) {
+            LOGGING.log(Level.WARNING, "Error calculating freuqency of block: " + block, e);
         }
     }
 
-    public synchronized void frameClosed()
-    {
+    @Override
+    public synchronized void frameClosed() {
         JPC.getInstance().objects().removeObject(this);
         if (record != null)
             record.setCodeBlockListener(null);
     }
 
-    public void pcCreated()
-    {
+    @Override
+    public void pcCreated() {
         refreshDetails();
     }
 
-    public void pcDisposed()
-    {
+    @Override
+    public void pcDisposed() {
         record = null;
         model.fireTableDataChanged();
     }
-    
-    public void executionStarted() {}
 
-    public void executionStopped() 
-    {
+    @Override
+    public void executionStarted() {
+    }
+
+    @Override
+    public void executionStopped() {
         refreshDetails();
     }
 
-    public int compare(Object o1, Object o2)
-    {
-        if (o1 == null)
-        {
+    @Override
+    public int compare(Object o1, Object o2) {
+        if (o1 == null) {
             if (o2 == null)
                 return 0;
-            else 
+            else
                 return 1;
-        }
-        else if (o2 == null)
+        } else if (o2 == null)
             return -1;
 
-        OpcodeEntry e1 = (OpcodeEntry) o1;
-        OpcodeEntry e2 = (OpcodeEntry) o2;
-        
+        OpcodeEntry e1 = (OpcodeEntry)o1;
+        OpcodeEntry e2 = (OpcodeEntry)o2;
+
         return e2.frequency - e1.frequency;
     }
 
-    public synchronized void refreshDetails()
-    {
-        CodeBlockRecord r = (CodeBlockRecord) JPC.getObject(CodeBlockRecord.class);
-        if (r != record)
-        {
+    @Override
+    public synchronized void refreshDetails() {
+        CodeBlockRecord r = (CodeBlockRecord)JPC.getObject(CodeBlockRecord.class);
+        if (r != record) {
             if (record != null)
                 record.setCodeBlockListener(null);
             record = r;
@@ -193,28 +194,25 @@ public class CodeBlockFrequencyFrame extends UtilityFrame implements PCListener,
         model.fireTableDataChanged();
     }
 
-    class FrequencyModel extends BasicTableModel
-    {
-        FrequencyModel()
-        {
-            super(new String[]{"Rank", "Opcode", "Frequency"}, new int[]{80, 200, 80});
+    class FrequencyModel extends BasicTableModel {
+        FrequencyModel() {
+            super(new String[] { "Rank", "Opcode", "Frequency" }, new int[] { 80, 200, 80 });
         }
 
-        public int getRowCount()
-        {
+        @Override
+        public int getRowCount() {
             return frequentCodes.length;
         }
 
-        public Object getValueAt(int row, int column)
-        {
+        @Override
+        public Object getValueAt(int row, int column) {
             OpcodeEntry e = frequentCodes[row];
             if (e == null)
                 return null;
 
-            switch (column)
-            {
-	    case 0:
-		return Integer.valueOf(row);
+            switch (column) {
+            case 0:
+                return Integer.valueOf(row);
             case 1:
                 return e.toString();
             case 2:

@@ -18,8 +18,8 @@
     You should have received a copy of the GNU General Public License along
     with this program; if not, write to the Free Software Foundation, Inc.,
     51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
- 
-    Details (including contact information) can be found at: 
+
+    Details (including contact information) can be found at:
 
     jpc.sourceforge.net
     or the developer website
@@ -31,42 +31,45 @@
     End of licence header
 */
 
-package org.jpc.support;
+package org.jpc.emulator.block.remote;
 
-import java.io.*;
-import java.net.*;
-import java.util.logging.*;
+import java.io.InputStream;
+import java.io.OutputStream;
+import java.net.ServerSocket;
+import java.net.Socket;
+import java.util.logging.Level;
+import java.util.logging.Logger;
+
+import org.jpc.support.ArgProcessor;
+import org.jpc.support.DriveSet;
 
 /**
- * 
  * @author Ian Preston
  */
-public class RemoteBlockDeviceServer 
-{
+public class RemoteBlockDeviceServer {
     private static final Logger LOGGING = Logger.getLogger(RemoteBlockDeviceServer.class.getName());
-    
-    public static void main(String[] args) throws Exception
-    {
+
+    public static void main(String[] args) throws Exception {
         DriveSet set = DriveSet.buildFromArgs(args);
-        
+
         int port = 6666;
-        try
-        {
+        try {
             port = Integer.parseInt(ArgProcessor.findVariable(args, "port", "6666"));
+        } catch (NumberFormatException e) {
         }
-        catch (NumberFormatException e) {}
 
         ServerSocket inputsock = new ServerSocket(port);
         Socket ss = inputsock.accept();
         InputStream in = ss.getInputStream();
 
         OutputStream out = ss.getOutputStream();
-        
+
         RemoteBlockDeviceImpl impl = new RemoteBlockDeviceImpl(in, out, set.getBootDevice());
-        
-        LOGGING.log(Level.INFO, "Server accepted connection to {0} on port {1,number,integer}", new Object[]{set.getBootDevice(), Integer.valueOf(port)});
+
+        LOGGING.log(Level.INFO, "Server accepted connection to {0} on port {1,number,integer}",
+            new Object[] { set.getBootDevice(), Integer.valueOf(port) });
     }
-    private RemoteBlockDeviceServer()
-    {
+
+    private RemoteBlockDeviceServer() {
     }
 }
